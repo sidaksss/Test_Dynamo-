@@ -1,0 +1,17 @@
+# This is a Revit shared parameter file.
+# Do not edit manually.
+*META	VERSION	MINVERSION
+META	2	1
+*GROUP	ID	NAME
+GROUP	1	Nachtragserfassung
+*PARAM	GUID	NAME	DATATYPE	DATACATEGORY	GROUP	VISIBLE	DESCRIPTION	USERMODIFIABLE	HIDEWHENNOVALUE
+PARAM	e2b5b388-dda0-4fb4-b361-2c53ffdb0f44	LV_Positionsnummer	TEXT		1	1	Verknuepfung des Bauteils zur Position im Leistungsverzeichnis	1	0
+PARAM	3cadfe62-09eb-4311-a667-5d98515b1907	LV_Kurztext	TEXT		1	1	Leistungsbeschreibung fuer die Nachtragstabelle	1	0
+PARAM	924cd359-0f81-40b3-a484-f7a0103ee8e9	Basismengeneinheit	TEXT		1	1	Einheit der LV-Position, z. B. Stk, m, m2, kg	1	0
+PARAM	93560b51-f954-46fe-bd67-abb9ff80dae4	Nachtrag_ElementGUID	TEXT		1	1	Stabile Revit Unique Id des Bauteils zum Versionsabgleich	0	0
+PARAM	4ba88e2d-dc75-4340-86ca-512da65fcffc	Nachtrag_Status	TEXT		1	1	Ergebnis des Versionsvergleichs: NEU_ELEMENT, MEHRUNG, MINDERUNG, AUSTAUSCH, UNVERAENDERT	0	0
+PARAM	a6dd552f-45f8-410b-99b1-045603825f62	Nachtrag_Erstversion	TEXT		1	1	Modellversion, in der das Element erstmals im Projekt auftaucht	0	0
+PARAM	2f252b0d-37bd-4929-9779-b72a27e1f415	Nachtrag_Nummer	TEXT		1	1	Nachtrag, in dem die Aenderung dieses Elements erfasst wurde, z. B. Nachtrag 3	0	0
+PARAM	e836caac-86de-4efc-8213-87b7907dae0d	Nachtrag_Freigabestatus	TEXT		1	1	Bearbeitungsstatus der Nachtragsposition: offen, geprueft, genehmigt	1	0
+PARAM	0d772d82-b9c6-458a-a84f-4de747e4ea2c	Nachtrag_Bemerkung	TEXT		1	1	Freitext / Begruendung zur Nachtragsposition	1	0
+PARAM	f773edc9-95cc-44d5-af9e-05b3bc866eaf	Einheitspreis	NUMBER		1	1	Optionaler Einheitspreis je Basismengeneinheit	1	0
