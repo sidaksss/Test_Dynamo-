@@ -18,6 +18,30 @@ LV importiert befüllt, bevor der Graph läuft.
 
 ## Knotenkette
 
+0. **`00_lv_zuordnung_by_typ.py`** *(optionaler Vorlauf-Schritt)*
+   Ordnet Bauteilen der **aktiven Ansicht** anhand des Shared Parameters
+   `Typ` (z. B. `QMX2.P33`) automatisch die passende `LV Nummer` aus einer
+   Excel-Tabelle zu. Nützlich, um `LV_Positionsnummer` (bzw. hier `LV
+   Nummer`) vor dem eigentlichen Nachtrags-Lauf ohne Handarbeit zu befüllen.
+   - **Excel einlesen** – OOTB-Node `Excel.ReadFromFile` (Datei, Blattname,
+     `readAsStrings = true`) liefert eine 2D-Liste inkl. Kopfzeile. Die
+     Tabelle hat genau zwei Spalten: **Spalte 1 = `LV Nummer`**,
+     **Spalte 2 = `Typ`**. Alternativ `Data.ImportCSV`, falls kein Excel
+     installiert ist (dann Datei vorher als CSV speichern).
+   - Input: `excel_rows` (2D-Liste aus dem Excel-Node), `typ_param_name`
+     (String Input, Default `Typ`), `lv_param_name` (String Input, Default
+     `LV Nummer`), `ask_before_overwrite` (Boolean Input, Default `true`).
+   - Verhalten: Elemente ohne beide Parameter werden übersprungen. Ist
+     `LV Nummer` bereits mit einem *anderen* Wert befüllt, erscheint pro
+     Konflikt ein Ja/Nein-Dialog ("vorhandenen Wert überschreiben?"). Wird
+     zu `Typ` kein Eintrag in der Excel-Liste gefunden, erscheint am Ende
+     eine Sammelmeldung mit allen betroffenen Element-IDs.
+   - Output: `[updated, not_found, declined]` – je eine Log-Liste zur
+     Kontrolle (z. B. per `Watch`-Node).
+   - Voraussetzung: `Typ` und `LV Nummer` sind als (Shared-)Projektparameter
+     den relevanten Kategorien zugeordnet (siehe
+     `shared_parameters/GA_Nachtrag_SharedParameters.txt`, Gruppe
+     *LV-Zuordnung*).
 1. **Auswahl** – `Categories` + `All Elements of Category` (OOTB) für die
    drei GA-Kategorien, zusammengeführt zu einer flachen Elementliste.
 2. **`01_collect_current_state.py`**

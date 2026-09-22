@@ -10,8 +10,8 @@ PDF-Datei erzeugt.
 - `shared_parameters/GA_Nachtrag_SharedParameters.txt` – Freigegebene
   Parameter für LV-Bezug und Nachtragsverfolgung (siehe unten).
 - `dynamo/python/` – Python-Script-Nodes für den Dynamo-Graphen
-  (Versionsvergleich, Klassifikation, Rückschreiben der Parameter,
-  Excel-/PDF-Export).
+  (LV-Zuordnung per Typ-Abgleich, Versionsvergleich, Klassifikation,
+  Rückschreiben der Parameter, Excel-/PDF-Export).
 - `dynamo/README.md` – Verdrahtung der Knoten im Dynamo-Graphen und
   Ablaufbeschreibung je Nachtrag.
 

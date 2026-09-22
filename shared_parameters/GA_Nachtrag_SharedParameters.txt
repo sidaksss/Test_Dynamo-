@@ -4,6 +4,7 @@
 META	2	1
 *GROUP	ID	NAME
 GROUP	1	Nachtragserfassung
+GROUP	2	LV-Zuordnung
 *PARAM	GUID	NAME	DATATYPE	DATACATEGORY	GROUP	VISIBLE	DESCRIPTION	USERMODIFIABLE	HIDEWHENNOVALUE
 PARAM	e2b5b388-dda0-4fb4-b361-2c53ffdb0f44	LV_Positionsnummer	TEXT		1	1	Verknuepfung des Bauteils zur Position im Leistungsverzeichnis	1	0
 PARAM	3cadfe62-09eb-4311-a667-5d98515b1907	LV_Kurztext	TEXT		1	1	Leistungsbeschreibung fuer die Nachtragstabelle	1	0
@@ -15,3 +16,5 @@ PARAM	2f252b0d-37bd-4929-9779-b72a27e1f415	Nachtrag_Nummer	TEXT		1	1	Nachtrag, i
 PARAM	e836caac-86de-4efc-8213-87b7907dae0d	Nachtrag_Freigabestatus	TEXT		1	1	Bearbeitungsstatus der Nachtragsposition: offen, geprueft, genehmigt	1	0
 PARAM	0d772d82-b9c6-458a-a84f-4de747e4ea2c	Nachtrag_Bemerkung	TEXT		1	1	Freitext / Begruendung zur Nachtragsposition	1	0
 PARAM	f773edc9-95cc-44d5-af9e-05b3bc866eaf	Einheitspreis	NUMBER		1	1	Optionaler Einheitspreis je Basismengeneinheit	1	0
+PARAM	1f0d24fd-a925-4982-bc29-77a7641a1c99	Typ	TEXT		2	1	Typkennzeichen des Bauteils, z. B. QMX2.P33, fuer den Excel-Abgleich zur LV Nummer	1	0
+PARAM	6e7caf22-a21c-4476-96fa-8daeafd39285	LV Nummer	TEXT		2	1	Per Dynamo aus Excel-Liste zugeordnete LV-Position anhand des Parameters Typ	1	0
