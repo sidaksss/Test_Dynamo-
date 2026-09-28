@@ -1,0 +1,257 @@
+{
+  "Uuid": "4abc20ca-70a3-4b31-8c09-ae542989dcbc",
+  "IsCustomNode": false,
+  "Description": "Weist Elementtypen gewählter Kategorien anhand des Typparameters 'Modell' die LV-Nummer aus einer CSV-Datenbank zu und legt eine Fehlerliste auf dem Desktop ab.",
+  "Name": "LV_Nummer_Zuweisen",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [
+    {
+      "Id": "8b95e85261484d55929dff0521c16556",
+      "Name": "1 Datenbank (CSV)",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "C:\\Users\\z0050rrk\\OneDrive - Siemens AG\\Desktop\\LV_Datenbank.csv",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "3a6e277f45f14560921bdc1b1496402f",
+      "Name": "2 Name des LV-Parameters",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "LV_Nummer",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "SelectedIndex": 0
+    }
+  ],
+  "Outputs": [
+    {
+      "Id": "9aec683c69a54980a7984137cc1a5942",
+      "Name": "Ergebnis",
+      "Type": "unknown",
+      "InitialValue": "",
+      "Description": "Visualisiert die Eingabe des Blocks als Ausgabe des Blocks"
+    }
+  ],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "8b95e85261484d55929dff0521c16556",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "79ff802c6e3a4e2490ec182ad1e110ac",
+          "Name": "",
+          "Description": "Dateipfad",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "HintPath": "C:\\Users\\z0050rrk\\OneDrive - Siemens AG\\Desktop\\LV_Datenbank.csv",
+      "InputValue": "C:\\Users\\z0050rrk\\OneDrive - Siemens AG\\Desktop\\LV_Datenbank.csv"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.StringInput, CoreNodeModels",
+      "Id": "3a6e277f45f14560921bdc1b1496402f",
+      "NodeType": "StringInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "a599da2a1ae24887b2d836e0c15c2417",
+          "Name": "",
+          "Description": "String",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "InputValue": "LV_Nummer"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"Dynamo Python Script node: weist den Elementtypen der gewaehlten\nKategorien ihre LV-Nummer aus einer CSV-Datenbank zu.\n\nAblauf:\n1. Datenbank (Spalte 1 = Modell, Spalte 2 = LV-Nummer) einlesen.\n   Akzeptiert ';', Tab oder ',' als Trennzeichen, ignoriert\n   Anfuehrungszeichen, Kopfzeile und Leerzeilen.\n2. Fenster mit allen Modellkategorien anzeigen, die Elemente enthalten;\n   der Benutzer hakt die gewuenschten Kategorien an.\n3. Fuer jeden Typ den Typparameter 'Modell' lesen, in der Datenbank\n   nachschlagen (Gross-/Kleinschreibung und Leerzeichen egal) und die\n   LV-Nummer in den Typparameter schreiben. Bereits befuellte LV-Nummern\n   werden nicht ueberschrieben.\n4. Alle Elemente ohne zugewiesene LV-Nummer als CSV-Fehlerliste auf dem\n   Desktop ablegen.\n\nInputs:  IN[0] Pfad zur Datenbank-CSV\n         IN[1] Name des LV-Typparameters (leer = 'LV_Nummer')\nOutput:  Zusammenfassung als Text.\n\nKompatibel mit IronPython2, CPython3 und PythonNet3 (keine f-Strings).\"\"\"\n\nimport datetime\nimport io\nimport os\nimport re\n\nimport clr\nclr.AddReference('RevitAPI')\nclr.AddReference('RevitServices')\nclr.AddReference('System.Windows.Forms')\nclr.AddReference('System.Drawing')\nimport System\nfrom Autodesk.Revit.DB import (BuiltInParameter, CategoryType,\n\tFilteredElementCollector, StorageType)\nfrom RevitServices.Persistence import DocumentManager\nfrom RevitServices.Transactions import TransactionManager\nfrom System.Drawing import Point, Size\nfrom System.Windows.Forms import (Button, CheckedListBox, DialogResult,\n\tDockStyle, Form, FormStartPosition, Label, Panel)\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\ndatabase_path = IN[0]\nlv_param_name = (IN[1] or '').strip() or 'LV_Nummer'\n\nHEADER_KEYS = ('MODELL', 'MODEL', 'TYPNAME', 'TYP')\nERROR_HEADER = ['Element-ID', 'Modell', 'Kategorie', 'Familie', 'Typ', 'Grund']\n\n\n# --- Datenbank ---------------------------------------------------------\n\ndef normalize(text):\n\treturn re.sub(r'\\s+', ' ', text or '').strip().upper()\n\n\ndef read_lines(path):\n\tfor encoding in ('utf-8-sig', 'cp1252'):\n\t\ttry:\n\t\t\twith io.open(path, 'r', encoding=encoding) as f:\n\t\t\t\treturn f.read().splitlines()\n\t\texcept UnicodeDecodeError:\n\t\t\tcontinue\n\treturn []\n\n\ndef parse_database(lines):\n\t\"\"\"Gibt (mapping, conflicts, invalid_lines) zurueck.\n\tmapping:       normalisiertes Modell -> LV-Nummer\n\tconflicts:     normalisierte Modelle mit widerspruechlichen LV-Nummern\n\tinvalid_lines: Zeilennummern, die nicht gelesen werden konnten\"\"\"\n\tmapping = {}\n\tconflicts = set()\n\tinvalid_lines = []\n\tfor number, line in enumerate(lines, 1):\n\t\tcleaned = line.replace('\"', '').strip().strip(';,\\t ')\n\t\tif not cleaned:\n\t\t\tcontinue\n\t\tparts = re.split(r'[;\\t]', cleaned)\n\t\tif len(parts) < 2:\n\t\t\tparts = cleaned.split(',')\n\t\tmodell = parts[0].strip()\n\t\tlv = parts[1].strip() if len(parts) > 1 else ''\n\t\tif normalize(modell) in HEADER_KEYS:\n\t\t\tcontinue\n\t\tif not modell or not lv:\n\t\t\tinvalid_lines.append(number)\n\t\t\tcontinue\n\t\tkey = normalize(modell)\n\t\tif key in mapping and mapping[key] != lv:\n\t\t\tconflicts.add(key)\n\t\tmapping.setdefault(key, lv)\n\treturn mapping, conflicts, invalid_lines\n\n\n# --- Kategorieauswahl ----------------------------------------------------\n\ndef model_categories_with_elements(document):\n\tresult = []\n\tfor cat in document.Settings.Categories:\n\t\tif cat.CategoryType != CategoryType.Model:\n\t\t\tcontinue\n\t\tcount = FilteredElementCollector(document).OfCategoryId(cat.Id) \\\n\t\t\t.WhereElementIsNotElementType().GetElementCount()\n\t\tif count:\n\t\t\tresult.append((cat.Name, cat.Id, count))\n\tresult.sort(key=lambda c: c[0].lower())\n\treturn result\n\n\ndef ask_for_categories(categories):\n\tform = Form()\n\tform.Text = 'LV-Nummern zuweisen'\n\tform.StartPosition = FormStartPosition.CenterScreen\n\tform.Size = Size(480, 600)\n\tform.TopMost = True\n\n\tbox = CheckedListBox()\n\tbox.CheckOnClick = True\n\tbox.Dock = DockStyle.Fill\n\tfor name, _, count in categories:\n\t\tbox.Items.Add('{0}   ({1} Elemente)'.format(name, count))\n\n\tbuttons = Panel()\n\tbuttons.Dock = DockStyle.Bottom\n\tbuttons.Height = 50\n\tok = Button()\n\tok.Text = 'OK'\n\tok.DialogResult = DialogResult.OK\n\tok.Size = Size(100, 30)\n\tok.Location = Point(240, 10)\n\tcancel = Button()\n\tcancel.Text = 'Abbrechen'\n\tcancel.DialogResult = DialogResult.Cancel\n\tcancel.Size = Size(100, 30)\n\tcancel.Location = Point(350, 10)\n\tbuttons.Controls.Add(ok)\n\tbuttons.Controls.Add(cancel)\n\n\tlabel = Label()\n\tlabel.Text = 'Kategorien anhaken, deren Bauteile eine LV-Nummer bekommen sollen:'\n\tlabel.Dock = DockStyle.Top\n\tlabel.Height = 40\n\n\t# Reihenfolge wichtig: das Fill-Element zuerst hinzufuegen.\n\tform.Controls.Add(box)\n\tform.Controls.Add(buttons)\n\tform.Controls.Add(label)\n\tform.AcceptButton = ok\n\tform.CancelButton = cancel\n\n\tif form.ShowDialog() != DialogResult.OK:\n\t\treturn None\n\treturn [categories[int(i)] for i in box.CheckedIndices]\n\n\n# --- Revit-Hilfsfunktionen -----------------------------------------------\n\ndef id_value(element_id):\n\tvalue = getattr(element_id, 'Value', None)  # Revit 2024+\n\tif value is None:\n\t\tvalue = element_id.IntegerValue\n\treturn int(value)\n\n\ndef param_string(element, built_in, fallback_name=None):\n\tp = element.get_Parameter(built_in)\n\tif p is None and fallback_name:\n\t\tp = element.LookupParameter(fallback_name)\n\tif p is None:\n\t\treturn ''\n\treturn p.AsString() or ''\n\n\ndef process_type(el_type, mapping, conflicts):\n\t\"\"\"Gibt (status, modell, familie, typ, grund) zurueck.\n\tstatus: 'geschrieben', 'vorhanden' oder 'fehler'.\"\"\"\n\tif el_type is None:\n\t\treturn ('fehler', '', '', '', 'Typ nicht gefunden')\n\tmodell = param_string(el_type, BuiltInParameter.ALL_MODEL_MODEL, 'Modell').strip()\n\tfamilie = param_string(el_type, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM)\n\ttyp = param_string(el_type, BuiltInParameter.SYMBOL_NAME_PARAM)\n\n\tdef result(status, reason=''):\n\t\treturn (status, modell, familie, typ, reason)\n\n\tp = el_type.LookupParameter(lv_param_name)\n\tif p is None:\n\t\treturn result('fehler', \"Typparameter '\" + lv_param_name + \"' fehlt\")\n\tif p.StorageType != StorageType.String:\n\t\treturn result('fehler', \"Parameter '\" + lv_param_name + \"' ist kein Text-Parameter\")\n\tif (p.AsString() or '').strip():\n\t\treturn result('vorhanden')\n\tif not modell:\n\t\treturn result('fehler', 'Parameter Modell ist leer')\n\tkey = normalize(modell)\n\tif key in conflicts:\n\t\treturn result('fehler', 'Modell steht mehrfach mit unterschiedlichen LV-Nummern in der Datenbank')\n\tlv = mapping.get(key)\n\tif lv is None:\n\t\treturn result('fehler', 'Modell nicht in Datenbank')\n\tif p.IsReadOnly:\n\t\treturn result('fehler', \"Parameter '\" + lv_param_name + \"' ist schreibgeschuetzt\")\n\ttry:\n\t\tp.Set(lv)\n\texcept Exception as ex:\n\t\treturn result('fehler', 'Schreiben fehlgeschlagen: ' + str(ex))\n\treturn result('geschrieben')\n\n\n# --- Fehlerliste -----------------------------------------------------------\n\ndef csv_field(value):\n\ttext = '' if value is None else str(value)\n\tif ';' in text or '\"' in text or '\\n' in text:\n\t\ttext = '\"' + text.replace('\"', '\"\"') + '\"'\n\treturn text\n\n\ndef write_error_list(rows):\n\tdesktop = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop)\n\tname = 'LV_Fehlerliste_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '.csv'\n\tpath = os.path.join(desktop, name)\n\tlines = [';'.join(csv_field(v) for v in row) for row in [ERROR_HEADER] + rows]\n\t# utf-8-sig, damit Excel Umlaute richtig anzeigt.\n\twith io.open(path, 'w', encoding='utf-8-sig', newline='') as f:\n\t\tf.write(u'\\r\\n'.join(lines) + u'\\r\\n')\n\treturn path\n\n\n# --- Hauptablauf -------------------------------------------------------------\n\ndef run():\n\tif not database_path or not os.path.isfile(database_path):\n\t\treturn 'FEHLER: Datenbank-Datei nicht gefunden: ' + str(database_path)\n\n\tmapping, conflicts, invalid_lines = parse_database(read_lines(database_path))\n\tif not mapping:\n\t\treturn 'FEHLER: In der Datenbank wurde keine gueltige Zeile gefunden.'\n\n\tselected = ask_for_categories(model_categories_with_elements(doc))\n\tif selected is None:\n\t\treturn 'Abgebrochen. Es wurde nichts geaendert.'\n\tif not selected:\n\t\treturn 'Keine Kategorie angehakt. Es wurde nichts geaendert.'\n\n\ttype_results = {}\n\terror_rows = []\n\telement_count = 0\n\n\tTransactionManager.Instance.EnsureInTransaction(doc)\n\ttry:\n\t\tfor cat_name, cat_id, _ in selected:\n\t\t\tcollector = FilteredElementCollector(doc).OfCategoryId(cat_id) \\\n\t\t\t\t.WhereElementIsNotElementType()\n\t\t\tfor el in collector:\n\t\t\t\telement_count += 1\n\t\t\t\ttype_id = el.GetTypeId()\n\t\t\t\tif type_id is None or id_value(type_id) < 0:\n\t\t\t\t\terror_rows.append([id_value(el.Id), '', cat_name, '', '', 'Element hat keinen Typ'])\n\t\t\t\t\tcontinue\n\t\t\t\tkey = id_value(type_id)\n\t\t\t\tif key not in type_results:\n\t\t\t\t\ttype_results[key] = process_type(doc.GetElement(type_id), mapping, conflicts)\n\t\t\t\tstatus, modell, familie, typ, reason = type_results[key]\n\t\t\t\tif status == 'fehler':\n\t\t\t\t\terror_rows.append([id_value(el.Id), modell, cat_name, familie, typ, reason])\n\tfinally:\n\t\tTransactionManager.Instance.TransactionTaskDone()\n\n\tstatuses = [r[0] for r in type_results.values()]\n\tsummary = [\n\t\t'FERTIG',\n\t\t'Kategorien: ' + ', '.join(c[0] for c in selected),\n\t\t'Gepruefte Elemente: ' + str(element_count),\n\t\t'Gepruefte Typen: ' + str(len(type_results)),\n\t\t'  LV-Nummer neu geschrieben: ' + str(statuses.count('geschrieben')) + ' Typen',\n\t\t'  LV-Nummer war schon vorhanden (nicht ueberschrieben): ' + str(statuses.count('vorhanden')) + ' Typen',\n\t\t'  Ohne LV-Nummer: ' + str(statuses.count('fehler')) + ' Typen',\n\t\t'Datenbank: ' + str(len(mapping)) + ' Eintraege gelesen',\n\t]\n\tif invalid_lines:\n\t\tsummary.append('  Unlesbare Datenbank-Zeilen: ' + ', '.join(str(n) for n in invalid_lines))\n\tif conflicts:\n\t\tsummary.append('  Widerspruechliche Modelle in der Datenbank: ' + ', '.join(sorted(conflicts)))\n\tif error_rows:\n\t\tsummary.append('Fehlerliste (' + str(len(error_rows)) + ' Elemente): ' + write_error_list(error_rows))\n\telse:\n\t\tsummary.append('Keine Fehler - alle Elemente haben eine LV-Nummer. Es wurde keine Fehlerliste erstellt.')\n\treturn '\\n'.join(summary)\n\n\nOUT = run()\n",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "d80b2c8749034b6ebf03086bbaf7f500",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "5a99d91c09404a4fae0edd5187e80565",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "2b47ce65885c4352a2df5854418e93fc",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "e4b9ad87a0da4d4794f694b6c06b583b",
+          "Name": "OUT",
+          "Description": "Ergebnis des Python-Skripts",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Führt ein eingebettetes Python-Skript aus."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 520.0,
+      "WatchHeight": 260.0,
+      "Id": "9aec683c69a54980a7984137cc1a5942",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "0f229617726c4685b84704e88d5136c3",
+          "Name": "",
+          "Description": "Knoten, der ausgewertet werden soll.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "93b4c5097b884d31aef3793648731d41",
+          "Name": "",
+          "Description": "Knotenauswertung überwachen",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualisiert die Eingabe des Blocks als Ausgabe des Blocks"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "79ff802c6e3a4e2490ec182ad1e110ac",
+      "End": "5a99d91c09404a4fae0edd5187e80565",
+      "Id": "437f357d4fdb42e3aeaffb3d5b5bfa29",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "a599da2a1ae24887b2d836e0c15c2417",
+      "End": "2b47ce65885c4352a2df5854418e93fc",
+      "Id": "1bd8d138f2ec47ada47662ae8a4b3010",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "e4b9ad87a0da4d4794f694b6c06b583b",
+      "End": "0f229617726c4685b84704e88d5136c3",
+      "Id": "5dbc1d1d6a9c4cc296b43c675a09e74d",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "Keine",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 0.01,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "3.6.1.9895",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Hintergrundvorschau",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "8b95e85261484d55929dff0521c16556",
+        "Name": "1 Datenbank (CSV)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 0.0
+      },
+      {
+        "Id": "3a6e277f45f14560921bdc1b1496402f",
+        "Name": "2 Name des LV-Parameters",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 200.0
+      },
+      {
+        "Id": "d80b2c8749034b6ebf03086bbaf7f500",
+        "Name": "LV-Nummern zuweisen",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 450.0,
+        "Y": 80.0
+      },
+      {
+        "Id": "9aec683c69a54980a7984137cc1a5942",
+        "Name": "Ergebnis",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": true,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 750.0,
+        "Y": 60.0
+      }
+    ],
+    "Annotations": [],
+    "X": 150.0,
+    "Y": 150.0,
+    "Zoom": 0.9
+  }
+}

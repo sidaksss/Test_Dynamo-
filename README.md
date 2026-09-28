@@ -14,6 +14,9 @@ PDF-Datei erzeugt.
   Excel-/PDF-Export).
 - `dynamo/README.md` – Verdrahtung der Knoten im Dynamo-Graphen und
   Ablaufbeschreibung je Nachtrag.
+- `lv_mapping/` – Dynamo-Skript, das Elementtypen über den Typparameter
+  `Modell` ihre LV-Nummer aus einer CSV-Datenbank zuweist (Anleitung in
+  `lv_mapping/ANLEITUNG.md`).
 
 ## Konzept in Kürze
 
