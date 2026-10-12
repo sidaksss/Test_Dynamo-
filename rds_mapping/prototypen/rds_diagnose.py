@@ -187,6 +187,20 @@ def read_spec(el, el_type, spec):
 	return value, where, storage_name(p), max(n_inst, n_type) > 1
 
 
+def nested_host(el):
+	"""Gibt (Element-ID, Familie) des uebergeordneten Elements zurueck,
+	wenn el eine verschachtelte (geteilte) Unterfamilie ist, sonst ('', '')."""
+	try:
+		host = getattr(el, 'SuperComponent', None)
+	except Exception:
+		host = None
+	if host is None:
+		return '', ''
+	host_type = doc.GetElement(host.GetTypeId())
+	family = param_text(host_type.get_Parameter(BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM)) if host_type is not None else ''
+	return id_value(host.Id), family
+
+
 def normalize(text):
 	return re.sub(r'\s+', ' ', (text or '').replace('_', ' ')).strip().upper()
 
@@ -259,6 +273,7 @@ def run():
 			if el_type is not None:
 				familie = param_text(el_type.get_Parameter(BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM))
 				typ = param_text(el_type.get_Parameter(BuiltInParameter.SYMBOL_NAME_PARAM))
+			host_id, host_family = nested_host(el)
 
 			values = {}
 			places = []
@@ -282,12 +297,14 @@ def run():
 				[id_value(el.Id), cat_name, familie, typ]
 				+ [values[n] for n in names]
 				+ ['/'.join(places)]
-				+ aspects + [key, normalize(values.get('Modell')), rds_consistency(values)])
+				+ aspects + [key, normalize(values.get('Modell')), rds_consistency(values), host_id, host_family])
 
 			t = types.setdefault(tkey, {'cat': cat_name, 'fam': familie, 'typ': typ, 'n': 0,
 				'modell': values.get('Modell', ''), 'funktion': set(), 'system': set(),
-				'keys': set(), 'mit_code': 0, 'lv': set()})
+				'keys': set(), 'mit_code': 0, 'lv': set(), 'nested': 0})
 			t['n'] += 1
+			if host_id != '':
+				t['nested'] += 1
 			if values.get('RDS_Funktion'):
 				t['funktion'].add(values['RDS_Funktion'])
 			if values.get('RDS_Systemkennzeichnung'):
@@ -309,19 +326,21 @@ def run():
 		[['Element-ID', 'Kategorie', 'Familie', 'Typ'] + names
 		+ ['Fundort je Parameter (' + '/'.join(names) + ')',
 		'RDS Ort-Aspekt (+)', 'RDS System-Aspekt (#)', 'RDS Funktions-Aspekt (=)', 'RDS Produkt-Aspekt (-)',
-		'Kandidat Typschluessel RDS', 'Kandidat Typschluessel Modell', 'RDS_Code passt zu Einzelparametern']]
+		'Kandidat Typschluessel RDS', 'Kandidat Typschluessel Modell', 'RDS_Code passt zu Einzelparametern',
+		'Verschachtelt in (Element-ID)', 'Familie des uebergeordneten Elements']]
 		+ element_rows)
 
 	type_rows = [['Typ-ID', 'Kategorie', 'Familie', 'Typ', 'Anzahl Exemplare', 'Modell',
 		'Anzahl versch. RDS_Funktion', 'Werte RDS_Funktion',
 		'Anzahl versch. RDS_Systemkennzeichnung', 'Werte RDS_Systemkennzeichnung',
-		'Anzahl versch. RDS-Typschluessel', 'Exemplare mit RDS_Code', 'Vorhandene LV-Werte']]
+		'Anzahl versch. RDS-Typschluessel', 'Exemplare mit RDS_Code', 'Vorhandene LV-Werte',
+		'davon verschachtelt']]
 	for tkey in sorted(types):
 		t = types[tkey]
 		type_rows.append([tkey, t['cat'], t['fam'], t['typ'], t['n'], t['modell'],
 			len(t['funktion']), ', '.join(sorted(t['funktion']))[:200],
 			len(t['system']), ', '.join(sorted(t['system']))[:200],
-			len(t['keys']), t['mit_code'], ', '.join(sorted(t['lv']))[:200]])
+			len(t['keys']), t['mit_code'], ', '.join(sorted(t['lv']))[:200], t['nested']])
 	write_csv(os.path.join(folder, '2_Typen.csv'), type_rows)
 
 	total = len(element_rows)
@@ -338,6 +357,7 @@ def run():
 	mit_rds = sum(1 for r in element_rows if r[4 + names.index('RDS_Code')])
 	rds_types = [t for t in types.values() if t['keys']]
 	einheitlich = sum(1 for t in rds_types if len(t['keys']) == 1)
+	verschachtelt = sum(1 for r in element_rows if r[-2] != '')
 	return '\n'.join([
 		'FERTIG (es wurde nichts veraendert)',
 		'Kategorien: ' + ', '.join(c[0] for c in selected),
@@ -346,6 +366,7 @@ def run():
 		'Elemente mit RDS_Code: ' + str(mit_rds) + ' (' + percent(mit_rds, total) + ')',
 		'Typen mit RDS, deren RDS-Typschluessel ueber alle Exemplare gleich ist: '
 			+ str(einheitlich) + ' von ' + str(len(rds_types)),
+		'Verschachtelte Elemente (Teil einer anderen Familie): ' + str(verschachtelt) + ' (' + percent(verschachtelt, total) + ')',
 		'Fundort RDS_Code: ' + ', '.join(k + '=' + str(param_stats['RDS_Code'][k]) for k in ('E', 'T', 'E+T', '-')),
 		'Ergebnisordner: ' + folder,
 	])

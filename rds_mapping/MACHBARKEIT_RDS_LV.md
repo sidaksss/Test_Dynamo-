@@ -2,6 +2,11 @@
 
 > **Status:** Studie, keine Umsetzung. Die Prototypen in `prototypen/` lesen nur Daten. Getestet sind sie lediglich mit simulierten Revit-Daten (Mock) und mit dem SAP-Beispielexport. **Ein Test in echtem Revit steht noch aus.**
 > **Stand:** Oktober 2026.
+>
+> **Update:** Die erste Diagnose im echten Projektmodell liegt vor. Siehe `DIAGNOSE_AUSWERTUNG_1.md`.
+> - Bestätigt: RDS-Parameter liegen am Exemplar; das RDS ist kein Produktschlüssel.
+> - Widerlegt für Siemens-Produkte: „Modell“ ist dort zu ≈ 100 % gepflegt.
+> - Neu: Trassen und Generikfamilien (87 % der Elemente) sowie ein Doppelzählungsrisiko durch verschachtelte Unterfamilien.
 > **Grundlage:**
 > - `PROJEKT_ZUSAMMENFASSUNG.md`
 > - ein Screenshot der Eigenschaftenpalette (Bauteil `WK_238`)
