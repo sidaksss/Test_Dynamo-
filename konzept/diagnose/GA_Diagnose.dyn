@@ -1,0 +1,366 @@
+{
+  "Uuid": "a4dece4d-0d66-4328-aec9-f9e6851f0231",
+  "IsCustomNode": false,
+  "Description": "GA-Diagnose (nur lesen): Kategorien, Kombinationen, Parameter, Datenbank-/LV-Deckung, Verknüpfungen und Ansichtsfilter als CSV auf den Desktop.",
+  "Name": "GA_Diagnose",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [
+    {
+      "Id": "0b17a9d9d99c42adb256ddd5441418a4",
+      "Name": "1 Datenbank-CSV (optional)",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "59b3fdc281224caa97ab44eb027100e7",
+      "Name": "2 LV-Datei aus SAP (optional)",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "c0df83b63b144ef3a70637aeb48601e5",
+      "Name": "3 Name eigener LV-Parameter",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "LV_Nummer",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "98a7d620f75744feb5624b551dc17a39",
+      "Name": "4 Weitere Parameter (kommagetrennt)",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "SelectedIndex": 0
+    }
+  ],
+  "Outputs": [
+    {
+      "Id": "7356162bcef4498bb986011f08ec2e68",
+      "Name": "Ergebnis",
+      "Type": "unknown",
+      "InitialValue": "",
+      "Description": "Visualisiert die Eingabe des Blocks als Ausgabe des Blocks"
+    }
+  ],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "0b17a9d9d99c42adb256ddd5441418a4",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "29aba2d9b64c498087c0c88c5b252c52",
+          "Name": "",
+          "Description": "Dateipfad",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "HintPath": "",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "59b3fdc281224caa97ab44eb027100e7",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "e8cfb21c096b4511953b18ebdde023bd",
+          "Name": "",
+          "Description": "Dateipfad",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "HintPath": "",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.StringInput, CoreNodeModels",
+      "Id": "c0df83b63b144ef3a70637aeb48601e5",
+      "NodeType": "StringInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "997fac681d2249c7a37982e3054aaef9",
+          "Name": "",
+          "Description": "String",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "InputValue": "LV_Nummer"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.StringInput, CoreNodeModels",
+      "Id": "98a7d620f75744feb5624b551dc17a39",
+      "NodeType": "StringInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "f1ac44c7f4c140609983157eeaa22e1a",
+          "Name": "",
+          "Description": "String",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"Dynamo Python Script node: GA-Diagnose (NUR LESEN, schreibt nichts ins\nModell). Erweiterung von rds_mapping/prototypen/rds_diagnose.py.\n\nSchreibt fuer die im Fenster gewaehlten Kategorien einen Ordner\nGA_Diagnose_<Zeitstempel> auf den Desktop (CSV, UTF-8 mit BOM, Trennzeichen ;):\n  0_Zusammenfassung.txt\n  1_Kategorien.csv             a) Uebersicht und GA-Hinweise je Kategorie\n  2_Kombinationen.csv          b) eindeutige Kombinationen (Eingabe fuer KI-Schritt)\n  3_Parameter.csv              c) alle vorkommenden Parameter: Exemplar/Typ, gefuellt\n  4_Modell_fehlt_in_DB.csv     d) Modellnamen, die in der Datenbank-CSV fehlen\n  5a_LV_Positionen.csv         e) Deckung LV -> Bauteile\n  5b_Bauteile_ohne_LV.csv      e) Deckung Bauteile -> LV\n  5c_Mengen_je_Leistungsnummer.csv  e) Soll (LV) gegen Ist (Modell), grob\n  6_Verknuepfungen.csv         f) RVT-Verknuepfungen und ihre Elemente\n  7_Filter.csv                 g) Ansichtsfilter: welcher Parameter blendet aus?\n\nInputs:  IN[0] Datenbank-CSV (Modell;LV-Nummer), optional\n         IN[1] LV-Datei aus SAP (.xlsx oder .csv), optional\n         IN[2] Name des eigenen LV-Parameters (leer = 'LV_Nummer')\n         IN[3] weitere Parameternamen, durch Komma getrennt, optional\nOutput:  Zusammenfassung als Text.\n\nStatus: Prototyp, nur gegen ein simuliertes Modell getestet. Test in echtem\nRevit steht aus. Kompatibel mit CPython3 und PythonNet3 (keine f-Strings).\"\"\"\n\nimport datetime\nimport io\nimport os\nimport re\nimport time\nimport zipfile\nimport xml.etree.ElementTree as ET\n\nimport clr\nclr.AddReference('RevitAPI')\nclr.AddReference('RevitServices')\nclr.AddReference('System.Windows.Forms')\nclr.AddReference('System.Drawing')\nimport System\nfrom Autodesk.Revit.DB import (BuiltInParameter, Category, CategoryType, CheckoutStatus,\n\tFilteredElementCollector, LabelUtils, ParameterFilterElement,\n\tRevitLinkInstance, StorageType, View, WorksharingUtils)\nfrom RevitServices.Persistence import DocumentManager\nfrom System.Drawing import Point, Size\nfrom System.Windows.Forms import (Application, Button, CheckedListBox,\n\tDialogResult, DockStyle, Form, FormStartPosition, Label, Panel)\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\n\ndef text_input(value):\n\treturn '' if value is None else str(value).strip()\n\n\nDB_PATH = text_input(IN[0])\nLV_PATH = text_input(IN[1])\nOWN_LV_PARAM = text_input(IN[2]) or 'LV_Nummer'\nEXTRA_PARAMS = [n.strip() for n in re.split(r'[;,]', text_input(IN[3])) if n.strip()]\n\nZWP_LV = 'ZWP_400_LV_Position'\nZWP_LP8 = 'ZWP_400_LP8_Abrechnung'\nZWP_FILTER = 'ZWP_400_Auswahlfilter'\nRDS_NAMES = ['RDS_Code', 'RDS_Projekt', 'RDS_Bauabschnitt', 'RDS_Modul', 'RDS_Teilmodul',\n\t'RDS_Gebaeude', 'RDS_Geschoss', 'RDS_Segment', 'RDS_Raum', 'RDS_System',\n\t'RDS_Systemkennzeichnung', 'RDS_SystemNum', 'RDS_Funktion', 'RDS_FunktionsNum']\n\n# ANNAHME: Parameternamen, die nach einer Kostengruppe aussehen.\nKG_PARAM_PATTERN = re.compile(r'kostengruppe|din.?276|(^|[_ ])kg($|[_ ])', re.IGNORECASE)\n# ANNAHME: Kostengruppe als dreistellige Zahl 410-499 im Familien-/Typnamen (z. B. ZWP_480_...).\nKG_IN_NAME = re.compile(r'(?:^|[_ ])(4[1-9]\\d)(?=[_ ]|$)')\n# ANNAHME: typische Anfaenge von Siemens-GA-/Brandschutz-Produktbezeichnungen.\nSIEMENS_CODE = re.compile(r'^(Q[A-Z]{2}\\d|PX[A-Z0-9]|TX[A-Z]\\d|DXR|POL\\d|RD[A-Z]\\d|RX[A-Z]\\d|RAK'\n\tr'|G[A-Z]{2}\\d|S[A-Z]{2}\\d|V[A-Z]{2}\\d|FD[A-Z]|FC[A-Z]?\\d|FT-?\\d|FA\\d|UP ?\\d)', re.IGNORECASE)\n# ANNAHME (IEC 81346-2): Kennbuchstaben, die in der GA typisch sind:\n# B messen, K verarbeiten/regeln, M antreiben, P anzeigen, Q stellen, S bedienen.\nGA_FUNCTION_LETTERS = 'BKMPQS'\nPROGRESS_STEP = 500\n\n\n# --- kleine Hilfsfunktionen ----------------------------------------------------\n\ndef id_value(element_id):\n\tvalue = getattr(element_id, 'Value', None)  # Revit 2024+\n\tif value is None:\n\t\tvalue = element_id.IntegerValue\n\treturn int(value)\n\n\ndef param_text(p):\n\tif p is None:\n\t\treturn ''\n\tst = p.StorageType\n\tif st == StorageType.String:\n\t\treturn (p.AsString() or '').strip()\n\tif not p.HasValue:\n\t\treturn ''\n\tif st == StorageType.Integer:\n\t\treturn str(p.AsInteger())\n\treturn (p.AsValueString() or '').strip()\n\n\ndef storage_name(p):\n\tfor name in ('String', 'Integer', 'Double', 'ElementId'):\n\t\tif p.StorageType == getattr(StorageType, name):\n\t\t\treturn name\n\treturn 'Sonstiges'\n\n\ndef by_name(element, name):\n\tif element is None:\n\t\treturn None\n\tfound = list(element.GetParameters(name))\n\treturn found[0] if found else None\n\n\ndef by_builtin(element, built_in):\n\tif element is None:\n\t\treturn None\n\treturn element.get_Parameter(built_in)\n\n\ndef value_of(el, el_type, name, built_in=None):\n\t\"\"\"Wert eines Parameters: erst am Exemplar, dann am Typ.\"\"\"\n\tfor target in (el, el_type):\n\t\tp = by_builtin(target, built_in) if built_in is not None else None\n\t\tif p is None:\n\t\t\tp = by_name(target, name)\n\t\ttext = param_text(p)\n\t\tif text:\n\t\t\treturn text\n\treturn ''\n\n\ndef collapse(text):\n\treturn re.sub(r'\\s+', ' ', text or '').strip().upper()\n\n\ndef nospace(text):\n\treturn re.sub(r'\\s+', '', text or '').upper()\n\n\ndef model_candidates(modell):\n\t\"\"\"Vergleichsschluessel fuer 'Modell': ganz, erstes Wort, erste zwei Woerter.\"\"\"\n\twords = collapse(modell).split(' ')\n\tresult = []\n\tfor c in (''.join(words), words[0], ''.join(words[:2])):\n\t\tif c and c not in result:\n\t\t\tresult.append(c)\n\treturn result\n\n\ndef real_function(funktion):\n\treturn (funktion or '').replace('_', '').strip()\n\n\ndef is_siemens(hersteller, familie, modell):\n\treturn ('SIEMENS' in (hersteller or '').upper()\n\t\tor (familie or '').upper().startswith(('SI_', 'SIE_'))\n\t\tor bool(SIEMENS_CODE.match(collapse(modell))))\n\n\ndef percent(part, total):\n\treturn '0 %' if not total else '{0:.0f} %'.format(100.0 * part / total)\n\n\ndef top(counter, n=5):\n\titems = sorted(counter.items(), key=lambda kv: (-kv[1], str(kv[0])))[:n]\n\treturn ', '.join('{0} ({1})'.format(k, v) for k, v in items)\n\n\ndef csv_field(value):\n\ttext = '' if value is None else str(value)\n\tif ';' in text or '\"' in text or '\\n' in text:\n\t\ttext = '\"' + text.replace('\"', '\"\"') + '\"'\n\treturn text\n\n\ndef write_csv(path, rows):\n\tlines = [';'.join(csv_field(v) for v in row) for row in rows]\n\twith io.open(path, 'w', encoding='utf-8-sig', newline='') as f:\n\t\tf.write(u'\\r\\n'.join(lines) + u'\\r\\n')\n\n\nclass Counter(dict):\n\t\"\"\"Minimaler Zaehler (collections.Counter ohne Abhaengigkeiten).\"\"\"\n\tdef add(self, key, n=1):\n\t\tself[key] = self.get(key, 0) + n\n\n\n# --- Kategorieauswahl und Fortschritt ------------------------------------------\n\ndef model_categories_with_elements(document):\n\tresult = []\n\tfor cat in document.Settings.Categories:\n\t\tif cat.CategoryType != CategoryType.Model:\n\t\t\tcontinue\n\t\tcount = FilteredElementCollector(document).OfCategoryId(cat.Id) \\\n\t\t\t.WhereElementIsNotElementType().GetElementCount()\n\t\tif count:\n\t\t\tresult.append((cat.Name, cat.Id, count))\n\tresult.sort(key=lambda c: c[0].lower())\n\treturn result\n\n\ndef ask_for_categories(categories):\n\tform = Form()\n\tform.Text = 'GA-Diagnose (nur lesen)'\n\tform.StartPosition = FormStartPosition.CenterScreen\n\tform.Size = Size(480, 600)\n\tform.TopMost = True\n\n\tbox = CheckedListBox()\n\tbox.CheckOnClick = True\n\tbox.Dock = DockStyle.Fill\n\tfor name, _, count in categories:\n\t\tbox.Items.Add('{0}   ({1} Elemente)'.format(name, count))\n\n\tbuttons = Panel()\n\tbuttons.Dock = DockStyle.Bottom\n\tbuttons.Height = 50\n\tok = Button()\n\tok.Text = 'OK'\n\tok.DialogResult = DialogResult.OK\n\tok.Size = Size(100, 30)\n\tok.Location = Point(240, 10)\n\tcancel = Button()\n\tcancel.Text = 'Abbrechen'\n\tcancel.DialogResult = DialogResult.Cancel\n\tcancel.Size = Size(100, 30)\n\tcancel.Location = Point(350, 10)\n\tbuttons.Controls.Add(ok)\n\tbuttons.Controls.Add(cancel)\n\n\tlabel = Label()\n\tlabel.Text = 'Kategorien anhaken, die untersucht werden sollen (es wird nichts veraendert):'\n\tlabel.Dock = DockStyle.Top\n\tlabel.Height = 40\n\n\tform.Controls.Add(box)\n\tform.Controls.Add(buttons)\n\tform.Controls.Add(label)\n\tform.AcceptButton = ok\n\tform.CancelButton = cancel\n\n\tif form.ShowDialog() != DialogResult.OK:\n\t\treturn None\n\treturn [categories[int(i)] for i in box.CheckedIndices]\n\n\nclass Progress(object):\n\t\"\"\"Kleines Fenster mit Fortschrittstext. Faellt still weg, wenn es nicht geht.\"\"\"\n\tdef __init__(self):\n\t\tself.form = None\n\t\tself.label = None\n\t\ttry:\n\t\t\tself.form = Form()\n\t\t\tself.form.Text = 'GA-Diagnose laeuft (nur lesen)'\n\t\t\tself.form.StartPosition = FormStartPosition.CenterScreen\n\t\t\tself.form.Size = Size(460, 120)\n\t\t\tself.form.TopMost = True\n\t\t\tself.label = Label()\n\t\t\tself.label.Dock = DockStyle.Fill\n\t\t\tself.form.Controls.Add(self.label)\n\t\t\tself.form.Show()\n\t\texcept Exception:\n\t\t\tself.form = None\n\n\tdef show(self, text):\n\t\tif self.form is None:\n\t\t\treturn\n\t\ttry:\n\t\t\tself.label.Text = text\n\t\t\tApplication.DoEvents()\n\t\texcept Exception:\n\t\t\tself.form = None\n\n\tdef close(self):\n\t\tif self.form is not None:\n\t\t\ttry:\n\t\t\t\tself.form.Close()\n\t\t\texcept Exception:\n\t\t\t\tpass\n\n\n# --- Datenbank-CSV und LV-Datei ------------------------------------------------\n\ndef read_lines(path):\n\tfor encoding in ('utf-8-sig', 'cp1252'):\n\t\ttry:\n\t\t\twith io.open(path, 'r', encoding=encoding) as f:\n\t\t\t\treturn f.read().splitlines()\n\t\texcept UnicodeDecodeError:\n\t\t\tcontinue\n\treturn []\n\n\ndef read_database(path):\n\t\"\"\"Modell -> LV-Nummer, tolerant wie lv_mapping (;, Tab, Anfuehrungszeichen).\"\"\"\n\tmapping = {}\n\tfor line in read_lines(path):\n\t\tcleaned = line.replace('\"', '').strip().strip(';,\\t ')\n\t\tparts = re.split(r'[;\\t]', cleaned)\n\t\tif len(parts) < 2:\n\t\t\tparts = cleaned.split(',')\n\t\tif len(parts) < 2 or not parts[0].strip() or not parts[1].strip():\n\t\t\tcontinue\n\t\tif collapse(parts[0]) in ('MODELL', 'MODEL', 'TYPNAME', 'TYP'):\n\t\t\tcontinue\n\t\tmapping.setdefault(nospace(parts[0]), parts[1].strip())\n\treturn mapping\n\n\ndef read_xlsx_rows(path):\n\tns = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'\n\twith zipfile.ZipFile(path) as z:\n\t\tnames = z.namelist()\n\t\tshared = []\n\t\tif 'xl/sharedStrings.xml' in names:\n\t\t\tfor si in ET.fromstring(z.read('xl/sharedStrings.xml')).findall(ns + 'si'):\n\t\t\t\tshared.append(''.join(t.text or '' for t in si.iter(ns + 't')))\n\t\tsheets = sorted(n for n in names if n.startswith('xl/worksheets/sheet'))\n\t\tsheet = ET.fromstring(z.read('xl/worksheets/sheet1.xml' if 'xl/worksheets/sheet1.xml' in names else sheets[0]))\n\trows = []\n\tfor row in sheet.find(ns + 'sheetData').findall(ns + 'row'):\n\t\tvalues = {}\n\t\tfor c in row.findall(ns + 'c'):\n\t\t\tletters = re.match(r'[A-Z]+', c.get('r')).group(0)\n\t\t\tcol = 0\n\t\t\tfor ch in letters:\n\t\t\t\tcol = col * 26 + ord(ch) - 64\n\t\t\tkind = c.get('t')\n\t\t\tif kind == 'inlineStr':\n\t\t\t\ttext = ''.join(t.text or '' for t in c.iter(ns + 't'))\n\t\t\telse:\n\t\t\t\tv = c.find(ns + 'v')\n\t\t\t\ttext = v.text if v is not None and v.text is not None else ''\n\t\t\t\tif kind == 's' and text:\n\t\t\t\t\ttext = shared[int(text)]\n\t\t\tvalues[col - 1] = text\n\t\twidth = max(values) + 1 if values else 0\n\t\trows.append([values.get(i, '') for i in range(width)])\n\treturn rows\n\n\ndef unique(values):\n\tresult = []\n\tfor v in values:\n\t\tif v and v not in result:\n\t\t\tresult.append(v)\n\treturn result\n\n\ndef read_lv(path):\n\t\"\"\"LV als Liste von Dicts mit einheitlichen Schluesseln.\"\"\"\n\tif path.lower().endswith(('.xlsx', '.xlsm')):\n\t\trows = read_xlsx_rows(path)\n\telse:\n\t\trows = [re.split(r'[;\\t]', line.replace('\"', '')) for line in read_lines(path) if line.strip()]\n\theader = [h.strip() for h in rows[0]]\n\n\tdef column(*names):\n\t\tfor n in names:\n\t\t\tfor i, h in enumerate(header):\n\t\t\t\tif h.lower() == n.lower():\n\t\t\t\t\treturn i\n\t\treturn None\n\n\tcols = {\n\t\t'pos': column('ext. Leistungsnummer', 'LV-Positionsnummer', 'Positionsnummer', 'OZ', 'Position'),\n\t\t'nr': column('Leistungsnummer'),\n\t\t'lid': column('L-Identifizierer'),\n\t\t'mat': column('Materialnummer'),\n\t\t'typ': column('Objekttyp'),\n\t\t'upos': column('Unterpositionsnummer'),\n\t\t'text1': column('Kurztextzeile 1', 'Kurztext'),\n\t\t'text2': column('Kurztextzeile 2'),\n\t\t'menge': column('Menge'),\n\t\t'einheit': column('Basismengeneinheit', 'Einheit'),\n\t}\n\tpositions = []\n\tfor row in rows[1:]:\n\t\tget = lambda key: (row[cols[key]].strip() if cols[key] is not None and cols[key] < len(row) else '')\n\t\tpos = get('pos')\n\t\tif not pos:\n\t\t\tcontinue\n\t\ttry:\n\t\t\tmenge = float(get('menge').replace(',', '.') or 0)\n\t\texcept ValueError:\n\t\t\tmenge = 0.0\n\t\tpositions.append({\n\t\t\t'pos': pos, 'typ': get('typ'), 'upos': get('upos'), 'nr': get('nr'),\n\t\t\t'keys': unique([nospace(get('nr')), nospace(get('lid')), nospace(get('mat'))]),\n\t\t\t'text': (get('text1') + ' ' + get('text2')).strip(), 'menge': menge, 'einheit': get('einheit'),\n\t\t})\n\treturn positions\n\n\n# --- Verknuepfungen und Filter -------------------------------------------------\n\ndef link_rows(selected):\n\trows = []\n\tfor link in FilteredElementCollector(doc).OfClass(RevitLinkInstance):\n\t\tlink_doc = None\n\t\ttry:\n\t\t\tlink_doc = link.GetLinkDocument()\n\t\texcept Exception:\n\t\t\tpass\n\t\tname = link.Name\n\t\tif link_doc is None:\n\t\t\trows.append([name, id_value(link.Id), 'nein', '', '', ''])\n\t\t\tcontinue\n\t\ttype_cache = {}\n\t\tfor cat_name, cat_id, _ in selected:\n\t\t\tn = 0\n\t\t\tsiemens = 0\n\t\t\tfor el in FilteredElementCollector(link_doc).OfCategoryId(cat_id).WhereElementIsNotElementType():\n\t\t\t\tn += 1\n\t\t\t\ttid = el.GetTypeId()\n\t\t\t\tkey = id_value(tid) if tid is not None else -1\n\t\t\t\tif key not in type_cache:\n\t\t\t\t\tt = link_doc.GetElement(tid) if key >= 0 else None\n\t\t\t\t\ttype_cache[key] = is_siemens(\n\t\t\t\t\t\tvalue_of(None, t, 'Hersteller', BuiltInParameter.ALL_MODEL_MANUFACTURER),\n\t\t\t\t\t\tparam_text(by_builtin(t, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM)),\n\t\t\t\t\t\tvalue_of(None, t, 'Modell', BuiltInParameter.ALL_MODEL_MODEL))\n\t\t\t\tif type_cache[key]:\n\t\t\t\t\tsiemens += 1\n\t\t\tif n:\n\t\t\t\trows.append([name, id_value(link.Id), 'ja', cat_name, n, siemens])\n\t\tif not any(r[0] == name and r[1] == id_value(link.Id) for r in rows):\n\t\t\trows.append([name, id_value(link.Id), 'ja', '(keine Elemente der gewaehlten Kategorien)', 0, 0])\n\treturn rows\n\n\ndef param_label(param_id):\n\tvalue = id_value(param_id)\n\tif value >= 0:\n\t\tel = doc.GetElement(param_id)\n\t\treturn el.Name if el is not None else str(value)\n\ttry:\n\t\tbip = System.Enum.ToObject(clr.GetClrType(BuiltInParameter), value)\n\t\treturn LabelUtils.GetLabelFor(bip)\n\texcept Exception:\n\t\treturn 'BuiltIn ' + str(value)\n\n\ndef describe_rule(rule):\n\tinner = getattr(rule, 'GetInnerRule', None)\n\tif inner is not None:\n\t\treturn 'NICHT(' + describe_rule(inner()) + ')'\n\tparts = [param_label(rule.GetRuleParameter()), rule.GetType().Name]\n\tevaluator = getattr(rule, 'GetEvaluator', None)\n\tif evaluator is not None:\n\t\ttry:\n\t\t\tparts.append(evaluator().GetType().Name)\n\t\texcept Exception:\n\t\t\tpass\n\tfor attr in ('RuleString', 'RuleValue'):\n\t\tvalue = getattr(rule, attr, None)\n\t\tif value is not None:\n\t\t\tparts.append(str(value))\n\treturn ' '.join(parts)\n\n\ndef describe_filter(element_filter):\n\tif element_filter is None:\n\t\treturn ''\n\trules = getattr(element_filter, 'GetRules', None)\n\tif rules is not None:\n\t\treturn ' UND '.join(describe_rule(r) for r in rules())\n\tchildren = getattr(element_filter, 'GetFilters', None)\n\tif children is not None:\n\t\tword = ' ODER ' if 'Or' in element_filter.GetType().Name else ' UND '\n\t\treturn word.join('(' + describe_filter(c) + ')' for c in children())\n\treturn element_filter.GetType().Name\n\n\ndef filter_rows():\n\tusage = {}\n\tfor view in FilteredElementCollector(doc).OfClass(View):\n\t\ttry:\n\t\t\tif not view.AreGraphicsOverridesAllowed():\n\t\t\t\tcontinue\n\t\t\tids = list(view.GetFilters())\n\t\texcept Exception:\n\t\t\tcontinue\n\t\tfor fid in ids:\n\t\t\tu = usage.setdefault(id_value(fid), {'n': 0, 'hidden': 0, 'views': []})\n\t\t\tu['n'] += 1\n\t\t\tif not view.GetFilterVisibility(fid):\n\t\t\t\tu['hidden'] += 1\n\t\t\t\tif len(u['views']) < 3:\n\t\t\t\t\tu['views'].append(('Vorlage: ' if view.IsTemplate else '') + view.Name)\n\trows = []\n\tfor pfe in FilteredElementCollector(doc).OfClass(ParameterFilterElement):\n\t\ttry:\n\t\t\trules = describe_filter(pfe.GetElementFilter())\n\t\texcept Exception as ex:\n\t\t\trules = 'nicht lesbar: ' + str(ex)\n\t\tcats = []\n\t\tfor cid in pfe.GetCategories():\n\t\t\ttry:\n\t\t\t\tcat = Category.GetCategory(doc, cid)\n\t\t\texcept Exception:\n\t\t\t\tcat = None\n\t\t\tcats.append(cat.Name if cat is not None else str(id_value(cid)))\n\t\tu = usage.get(id_value(pfe.Id), {'n': 0, 'hidden': 0, 'views': []})\n\t\trows.append([pfe.Name, ', '.join(cats)[:300], rules, u['n'], u['hidden'], ' | '.join(u['views'])])\n\treturn rows\n\n\n# --- Hauptablauf ---------------------------------------------------------------\n\ndef run():\n\tstarted = time.time()\n\tcategories = model_categories_with_elements(doc)\n\tselected = ask_for_categories(categories)\n\tif selected is None:\n\t\treturn 'Abgebrochen.'\n\tif not selected:\n\t\treturn 'Keine Kategorie angehakt.'\n\n\tdatabase = read_database(DB_PATH) if DB_PATH and os.path.isfile(DB_PATH) else None\n\tlv = read_lv(LV_PATH) if LV_PATH and os.path.isfile(LV_PATH) else None\n\tlv_keys = {}\n\tif lv:\n\t\tfor p in lv:\n\t\t\tfor k in p['keys']:\n\t\t\t\tlv_keys.setdefault(k, set()).add(p['pos'])\n\n\tdef lookup(table, modell):\n\t\tfor c in model_candidates(modell):\n\t\t\tif c in table:\n\t\t\t\treturn c\n\t\treturn None\n\n\tworkshared = bool(getattr(doc, 'IsWorkshared', False))\n\tworkset_names = {}\n\ttype_cache = {}\n\tcat_stats = {}\n\tcombos = {}\n\tparams = {}\n\ttype_params_done = set()\n\tmodel_names = {}\n\town_lv_values = Counter()\n\tlv_matched_by_key = Counter()\n\ttotal = sum(c[2] for c in selected)\n\tdone = 0\n\tprogress = Progress()\n\n\tfor cat_name, cat_id, _ in selected:\n\t\tcs = cat_stats.setdefault(cat_name, dict((k, 0) for k in (\n\t\t\t'n', 'modell', 'rds_code', 'funktion', 'kommentar', 'zwp_lv', 'lp8', 'own_lv', 'kg_param',\n\t\t\t'kg_name', 'siemens', 'si_family', 'siemens_code', 'ga_function', 'nested', 'demolished',\n\t\t\t'owned_other', 'siem_lp8', 'siem_not_lp8', 'lp8_not_siem', 'zwp_eq_own', 'zwp_ne_own',\n\t\t\t'in_db', 'in_lv')))\n\t\tcs['types'] = set()\n\t\tfor key in ('kg_values', 'letters', 'systems', 'worksets', 'kg_params'):\n\t\t\tcs[key] = Counter()\n\n\t\tfor el in FilteredElementCollector(doc).OfCategoryId(cat_id).WhereElementIsNotElementType():\n\t\t\tdone += 1\n\t\t\tif done % PROGRESS_STEP == 0:\n\t\t\t\tprogress.show('{0}: {1} von {2} Elementen ({3})'.format(cat_name, done, total, percent(done, total)))\n\n\t\t\ttid = el.GetTypeId()\n\t\t\ttkey = id_value(tid) if tid is not None else -1\n\t\t\tif tkey not in type_cache:\n\t\t\t\tt = doc.GetElement(tid) if tkey >= 0 else None\n\t\t\t\ttype_cache[tkey] = {\n\t\t\t\t\t'el': t,\n\t\t\t\t\t'familie': param_text(by_builtin(t, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM)),\n\t\t\t\t\t'typ': param_text(by_builtin(t, BuiltInParameter.SYMBOL_NAME_PARAM)),\n\t\t\t\t\t'count': Counter(),\n\t\t\t\t}\n\t\t\tti = type_cache[tkey]\n\t\t\tt = ti['el']\n\t\t\tti['count'].add(cat_name)\n\t\t\tfamilie, typ = ti['familie'], ti['typ']\n\n\t\t\tmodell = value_of(el, t, 'Modell', BuiltInParameter.ALL_MODEL_MODEL)\n\t\t\thersteller = value_of(el, t, 'Hersteller', BuiltInParameter.ALL_MODEL_MANUFACTURER)\n\t\t\tkommentar = value_of(el, None, 'Kommentare', BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)\n\t\t\trds = dict((n, value_of(el, t, n)) for n in ('RDS_Code', 'RDS_Funktion', 'RDS_System', 'RDS_Systemkennzeichnung'))\n\t\t\tzwp_lv = value_of(el, t, ZWP_LV)\n\t\t\tlp8 = value_of(el, t, ZWP_LP8) == '1'\n\t\t\town_lv = value_of(el, t, OWN_LV_PARAM)\n\t\t\tsiemens = is_siemens(hersteller, familie, modell)\n\t\t\tfunktion = real_function(rds['RDS_Funktion'])\n\n\t\t\thost = None\n\t\t\ttry:\n\t\t\t\thost = getattr(el, 'SuperComponent', None)\n\t\t\texcept Exception:\n\t\t\t\thost = None\n\t\t\tdemolished = by_builtin(el, BuiltInParameter.PHASE_DEMOLISHED)\n\t\t\tis_demolished = demolished is not None and demolished.HasValue and id_value(demolished.AsElementId()) >= 0\n\n\t\t\t# c) alle Parameter: Exemplar je Element, Typ einmal je Typ (spaeter gewichtet)\n\t\t\tkg_filled = False\n\t\t\tfor p in el.Parameters:\n\t\t\t\tname = p.Definition.Name\n\t\t\t\tinfo = params.setdefault(name, {'E': 0, 'T': 0, 'E_filled': 0, 'T_filled': 0,\n\t\t\t\t\t'storage': storage_name(p), 'shared': bool(getattr(p, 'IsShared', False)), 'cats': set()})\n\t\t\t\tinfo['E'] += 1\n\t\t\t\tinfo['cats'].add(cat_name)\n\t\t\t\ttext = param_text(p)\n\t\t\t\tif text:\n\t\t\t\t\tinfo['E_filled'] += 1\n\t\t\t\t\tif KG_PARAM_PATTERN.search(name):\n\t\t\t\t\t\tkg_filled = True\n\t\t\t\t\t\tcs['kg_params'].add(name)\n\t\t\tif t is not None and tkey not in type_params_done:\n\t\t\t\ttype_params_done.add(tkey)\n\t\t\t\tti['params'] = []\n\t\t\t\tfor p in t.Parameters:\n\t\t\t\t\tname = p.Definition.Name\n\t\t\t\t\tfilled = bool(param_text(p))\n\t\t\t\t\tti['params'].append((name, filled, storage_name(p), bool(getattr(p, 'IsShared', False))))\n\t\t\t\t\tif filled and KG_PARAM_PATTERN.search(name):\n\t\t\t\t\t\tti['kg'] = name\n\t\t\tif ti.get('kg'):\n\t\t\t\tkg_filled = True\n\t\t\t\tcs['kg_params'].add(ti['kg'])\n\n\t\t\t# a) Kategorie-Uebersicht\n\t\t\tcs['n'] += 1\n\t\t\tcs['types'].add(tkey)\n\t\t\tfor flag, key in ((modell, 'modell'), (rds['RDS_Code'], 'rds_code'), (funktion, 'funktion'),\n\t\t\t\t\t(kommentar, 'kommentar'), (zwp_lv, 'zwp_lv'), (lp8, 'lp8'), (own_lv, 'own_lv'),\n\t\t\t\t\t(kg_filled, 'kg_param'), (siemens, 'siemens'), (host is not None, 'nested'),\n\t\t\t\t\t(is_demolished, 'demolished')):\n\t\t\t\tif flag:\n\t\t\t\t\tcs[key] += 1\n\t\t\tif familie.upper().startswith(('SI_', 'SIE_')):\n\t\t\t\tcs['si_family'] += 1\n\t\t\tif SIEMENS_CODE.match(collapse(modell)):\n\t\t\t\tcs['siemens_code'] += 1\n\t\t\tif funktion and funktion[0].upper() in GA_FUNCTION_LETTERS:\n\t\t\t\tcs['ga_function'] += 1\n\t\t\tif funktion:\n\t\t\t\tcs['letters'].add(funktion[0].upper())\n\t\t\tif rds['RDS_System']:\n\t\t\t\tcs['systems'].add(rds['RDS_System'] + ' ' + rds['RDS_Systemkennzeichnung'])\n\t\t\tkg_match = KG_IN_NAME.search(familie + ' ' + typ)\n\t\t\tif kg_match:\n\t\t\t\tcs['kg_name'] += 1\n\t\t\t\tcs['kg_values'].add(kg_match.group(1))\n\t\t\tif siemens and lp8:\n\t\t\t\tcs['siem_lp8'] += 1\n\t\t\telif siemens:\n\t\t\t\tcs['siem_not_lp8'] += 1\n\t\t\telif lp8:\n\t\t\t\tcs['lp8_not_siem'] += 1\n\t\t\tif zwp_lv and own_lv:\n\t\t\t\tcs['zwp_eq_own' if nospace(zwp_lv) == nospace(own_lv) else 'zwp_ne_own'] += 1\n\t\t\tif workshared:\n\t\t\t\ttry:\n\t\t\t\t\twid = id_value(el.WorksetId)\n\t\t\t\t\tif wid not in workset_names:\n\t\t\t\t\t\tworkset_names[wid] = doc.GetWorksetTable().GetWorkset(el.WorksetId).Name\n\t\t\t\t\tcs['worksets'].add(workset_names[wid])\n\t\t\t\t\tif WorksharingUtils.GetCheckoutStatus(doc, el.Id) == CheckoutStatus.OwnedByOtherUser:\n\t\t\t\t\t\tcs['owned_other'] += 1\n\t\t\t\texcept Exception:\n\t\t\t\t\tpass\n\n\t\t\tin_db = lookup(database, modell) if database is not None and modell else None\n\t\t\tin_lv = lookup(lv_keys, modell) if lv is not None and modell else None\n\t\t\tif in_db:\n\t\t\t\tcs['in_db'] += 1\n\t\t\tif in_lv:\n\t\t\t\tcs['in_lv'] += 1\n\t\t\t\tif host is None and not is_demolished:\n\t\t\t\t\tlv_matched_by_key.add(in_lv)\n\t\t\tif own_lv:\n\t\t\t\town_lv_values.add(own_lv)\n\n\t\t\t# b) Kombinationen\n\t\t\tkey = (cat_name, familie, typ, modell, rds['RDS_Funktion'], rds['RDS_System'],\n\t\t\t\trds['RDS_Systemkennzeichnung'], kommentar)\n\t\t\tc = combos.setdefault(key, {'n': 0, 'lp8': 0, 'nested': 0, 'siemens': siemens,\n\t\t\t\t'in_db': in_db, 'in_lv': in_lv, 'own_lv': Counter()})\n\t\t\tc['n'] += 1\n\t\t\tif lp8:\n\t\t\t\tc['lp8'] += 1\n\t\t\tif host is not None:\n\t\t\t\tc['nested'] += 1\n\t\t\tif own_lv:\n\t\t\t\tc['own_lv'].add(own_lv)\n\n\t\t\t# d) Modellnamen\n\t\t\tif modell:\n\t\t\t\tm = model_names.setdefault(collapse(modell), {'n': 0, 'types': set(), 'cats': set(), 'in_db': in_db})\n\t\t\t\tm['n'] += 1\n\t\t\t\tm['types'].add(tkey)\n\t\t\t\tm['cats'].add(cat_name)\n\n\tprogress.show('Schreibe Dateien ...')\n\n\t# Typ-Parameter gewichtet mit der Anzahl Exemplare\n\tfor tkey, ti in type_cache.items():\n\t\tn_inst = sum(ti['count'].values())\n\t\tfor name, filled, storage, shared in ti.get('params', []):\n\t\t\tinfo = params.setdefault(name, {'E': 0, 'T': 0, 'E_filled': 0, 'T_filled': 0,\n\t\t\t\t'storage': storage, 'shared': shared, 'cats': set()})\n\t\t\tinfo['T'] += n_inst\n\t\t\tif filled:\n\t\t\t\tinfo['T_filled'] += n_inst\n\t\t\tinfo['cats'].update(ti['count'].keys())\n\n\tfolder = os.path.join(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop),\n\t\t'GA_Diagnose_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))\n\tos.makedirs(folder)\n\n\t# 1) Kategorien\n\trows = [['Kategorie', 'Exemplare', 'Typen', 'Modell gefuellt', 'RDS_Code gefuellt', 'RDS_Funktion gefuellt',\n\t\t'Kommentar gefuellt', ZWP_LV + ' gefuellt', ZWP_LP8 + ' angehakt', OWN_LV_PARAM + ' gefuellt',\n\t\t'Kostengruppen-Parameter gefuellt', 'Kostengruppen-Parameter (Namen)', 'KG im Familien-/Typnamen', 'KG-Werte im Namen',\n\t\t'Hersteller Siemens / SI_-Familie / Siemens-Code (eins davon)', 'davon SI_-Familie', 'Modell mit Siemens-Code',\n\t\t'RDS-Funktion GA-typisch (B,K,M,P,Q,S)', 'RDS-Kennbuchstaben', 'RDS-Systeme (haeufigste)',\n\t\t'Siemens-typisch UND LP8', 'Siemens-typisch OHNE LP8', 'LP8 OHNE Siemens-typisch',\n\t\t'ZWP_LV = eigene LV', 'ZWP_LV <> eigene LV', 'Modell in Datenbank', 'Modell im LV',\n\t\t'verschachtelt (Unterfamilie)', 'Abbruchphase gesetzt', 'Arbeitssaetze', 'von anderen Benutzern belegt']]\n\tfor cat_name, _, _ in selected:\n\t\ts = cat_stats[cat_name]\n\t\tn = s['n']\n\t\tpc = lambda k: '{0} ({1})'.format(s[k], percent(s[k], n))\n\t\trows.append([cat_name, n, len(s['types']), pc('modell'), pc('rds_code'), pc('funktion'), pc('kommentar'),\n\t\t\tpc('zwp_lv'), pc('lp8'), pc('own_lv'), pc('kg_param'), ', '.join(sorted(s['kg_params'])),\n\t\t\tpc('kg_name'), top(s['kg_values']), pc('siemens'), pc('si_family'), pc('siemens_code'),\n\t\t\tpc('ga_function'), top(s['letters'], 8), top(s['systems']), s['siem_lp8'], s['siem_not_lp8'],\n\t\t\ts['lp8_not_siem'], s['zwp_eq_own'], s['zwp_ne_own'],\n\t\t\tpc('in_db') if database is not None else 'keine DB', pc('in_lv') if lv is not None else 'kein LV',\n\t\t\tpc('nested'), pc('demolished'), top(s['worksets'], 3) if workshared else 'kein Worksharing',\n\t\t\ts['owned_other'] if workshared else '-'])\n\twrite_csv(os.path.join(folder, '1_Kategorien.csv'), rows)\n\n\t# 2) Kombinationen\n\trows = [['Kategorie', 'Familie', 'Typ', 'Modell', 'RDS_Funktion', 'RDS_System', 'RDS_Systemkennzeichnung',\n\t\t'Kommentar', 'Anzahl Exemplare', 'davon verschachtelt', 'davon LP8 angehakt', 'Siemens-typisch',\n\t\t'Modell in Datenbank', 'Modell im LV (Leistungsnummer)', 'vorhandene eigene LV-Nummer']]\n\tfor key in sorted(combos, key=lambda k: (k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7])):\n\t\tc = combos[key]\n\t\trows.append(list(key) + [c['n'], c['nested'], c['lp8'], 'ja' if c['siemens'] else 'nein',\n\t\t\t('ja' if c['in_db'] else 'nein') if database is not None else '',\n\t\t\t(c['in_lv'] or 'nein') if lv is not None else '', top(c['own_lv'], 3)])\n\twrite_csv(os.path.join(folder, '2_Kombinationen.csv'), rows)\n\n\t# 3) Parameter\n\trows = [['Parameter', 'liegt am', 'Elemente mit Parameter am Exemplar', 'davon mit Wert (Ja/Nein: auch Nein)',\n\t\t'Elemente mit Parameter am Typ', 'davon mit Wert (gewichtet mit Exemplaren)', 'Datentyp', 'gemeinsam genutzt', 'Kategorien',\n\t\t'moeglicher Kostengruppen-Parameter']]\n\tfocus = set(['Modell', 'Kommentare', ZWP_LV, ZWP_LP8, ZWP_FILTER, OWN_LV_PARAM] + RDS_NAMES + EXTRA_PARAMS)\n\tfor name in sorted(params, key=lambda n: (n not in focus, n.lower())):\n\t\tinfo = params[name]\n\t\twhere = 'Exemplar und Typ' if info['E'] and info['T'] else ('Exemplar' if info['E'] else 'Typ')\n\t\trows.append([name, where, info['E'], info['E_filled'], info['T'], info['T_filled'], info['storage'],\n\t\t\t'ja' if info['shared'] else 'nein', ', '.join(sorted(info['cats']))[:200],\n\t\t\t'ja' if KG_PARAM_PATTERN.search(name) else ''])\n\tfor name in sorted(focus - set(params)):\n\t\trows.append([name, 'nicht gefunden', 0, 0, 0, 0, '', '', '', ''])\n\twrite_csv(os.path.join(folder, '3_Parameter.csv'), rows)\n\n\t# 4) Modellnamen, die in der Datenbank fehlen\n\trows = [['Modell', 'Anzahl Exemplare', 'Anzahl Typen', 'Kategorien', 'Status']]\n\tmissing = 0\n\tif database is None:\n\t\trows.append(['(keine Datenbank-CSV angegeben)', '', '', '', ''])\n\telse:\n\t\tfor name in sorted(model_names, key=lambda k: -model_names[k]['n']):\n\t\t\tm = model_names[name]\n\t\t\tif m['in_db']:\n\t\t\t\tcontinue\n\t\t\tmissing += 1\n\t\t\trows.append([name, m['n'], len(m['types']), ', '.join(sorted(m['cats'])), 'fehlt in Datenbank'])\n\twrite_csv(os.path.join(folder, '4_Modell_fehlt_in_DB.csv'), rows)\n\n\t# 5) LV-Deckung\n\tlv_summary = 'kein LV angegeben'\n\tif lv is not None:\n\t\tby_nr = {}\n\t\tfor p in lv:\n\t\t\tif p['keys']:\n\t\t\t\tby_nr.setdefault(p['keys'][0], []).append(p)\n\t\trows = [['LV-Position', 'Objekttyp', 'Unterposition', 'Leistungsnummer', 'Kurztext', 'LV-Menge', 'Einheit',\n\t\t\t'Bauteile mit eigener LV-Nummer = Position', 'Bauteile mit passendem Modell (alle Positionen dieser Leistungsnummer)',\n\t\t\t'Positionen mit gleicher Leistungsnummer', 'Bewertung']]\n\t\tohne = 0\n\t\tfor p in lv:\n\t\t\tif not p['nr'] and not p['typ']:\n\t\t\t\tcontinue  # Titel- oder Hinweiszeile\n\t\t\tby_own = own_lv_values.get(p['pos'], 0)\n\t\t\tby_model = sum(lv_matched_by_key.get(k, 0) for k in p['keys'])\n\t\t\tsame = len(by_nr.get(p['keys'][0], [])) if p['keys'] else 0\n\t\t\tif re.match(r'^(FP|DL)_|^RSS-', p['nr'].upper()):\n\t\t\t\trating = 'Pauschale/Dienstleistung (ANNAHME: nicht modelliert)'\n\t\t\telif not p['nr']:\n\t\t\t\trating = 'Masterposition (Summe der Unterpositionen)'\n\t\t\telif by_own:\n\t\t\t\trating = 'zugeordnet ueber eigene LV-Nummer'\n\t\t\telif by_model and same == 1:\n\t\t\t\trating = 'eindeutig ueber Modell'\n\t\t\telif by_model:\n\t\t\t\trating = 'Produkt vorhanden, Position mehrdeutig'\n\t\t\telse:\n\t\t\t\trating = 'keine Bauteile gefunden'\n\t\t\t\tohne += 1\n\t\t\trows.append([p['pos'], p['typ'], p['upos'], p['nr'], p['text'], p['menge'], p['einheit'],\n\t\t\t\tby_own, by_model, same, rating])\n\t\twrite_csv(os.path.join(folder, '5a_LV_Positionen.csv'), rows)\n\n\t\trows = [['Kategorie', 'Familie', 'Typ', 'Modell', 'Anzahl Exemplare', 'Siemens-typisch', 'Grund']]\n\t\tohne_bt = 0\n\t\tfor key in sorted(combos):\n\t\t\tc = combos[key]\n\t\t\tif c['in_lv'] or c['own_lv']:\n\t\t\t\tcontinue\n\t\t\tohne_bt += c['n']\n\t\t\trows.append([key[0], key[1], key[2], key[3], c['n'], 'ja' if c['siemens'] else 'nein',\n\t\t\t\t'Modell leer' if not key[3] else 'Modell nicht im LV'])\n\t\twrite_csv(os.path.join(folder, '5b_Bauteile_ohne_LV.csv'), rows)\n\n\t\trows = [['Leistungsnummer', 'Kurztext', 'LV-Menge (Summe aller Positionen)', 'Einheit', 'Anzahl LV-Positionen',\n\t\t\t'Bauteile im Modell (ohne verschachtelte und abgebrochene)', 'Differenz Modell - LV']]\n\t\tfor nr_key in sorted(by_nr):\n\t\t\tps = by_nr[nr_key]\n\t\t\tif re.match(r'^(FP|DL)_|^RSS-', ps[0]['nr'].upper()):\n\t\t\t\tcontinue\n\t\t\tsoll = sum(p['menge'] for p in ps if p['typ'] != 'M')\n\t\t\tist = sum(lv_matched_by_key.get(k, 0) for k in ps[0]['keys'])\n\t\t\trows.append([ps[0]['nr'], ps[0]['text'], soll, ps[0]['einheit'], len(ps), ist, ist - soll])\n\t\twrite_csv(os.path.join(folder, '5c_Mengen_je_Leistungsnummer.csv'), rows)\n\t\tlv_summary = 'LV: {0} Zeilen; Positionen ohne Bauteile: {1}; Bauteile ohne LV: {2}'.format(len(lv), ohne, ohne_bt)\n\n\t# 6) Verknuepfungen\n\tprogress.show('Pruefe Verknuepfungen ...')\n\ttry:\n\t\tlinks = link_rows(selected)\n\texcept Exception as ex:\n\t\tlinks = [['Fehler beim Lesen der Verknuepfungen: ' + str(ex), '', '', '', '', '']]\n\twrite_csv(os.path.join(folder, '6_Verknuepfungen.csv'),\n\t\t[['Verknuepfung', 'Instanz-ID', 'geladen', 'Kategorie', 'Elemente', 'davon Siemens-typisch']] + links)\n\n\t# 7) Filter\n\tprogress.show('Pruefe Ansichtsfilter ...')\n\ttry:\n\t\tfilters = filter_rows()\n\texcept Exception as ex:\n\t\tfilters = [['Fehler beim Lesen der Filter: ' + str(ex), '', '', '', '', '']]\n\twrite_csv(os.path.join(folder, '7_Filter.csv'),\n\t\t[['Filtername', 'Kategorien', 'Regeln (Parameter Regeltyp Vergleich Wert)', 'verwendet in Ansichten/Vorlagen',\n\t\t'davon ausgeblendet', 'Beispiele (ausgeblendet)']] + filters)\n\tprogress.close()\n\n\tn_all = sum(s['n'] for s in cat_stats.values())\n\tn_links_loaded = len(set((r[0], r[1]) for r in links if r[2] == 'ja'))\n\tn_links = len(set((r[0], r[1]) for r in links if r[2] in ('ja', 'nein')))\n\tsummary = [\n\t\t'FERTIG (es wurde nichts veraendert) - Dauer: {0:.0f} s'.format(time.time() - started),\n\t\t'Kategorien: ' + ', '.join(c[0] for c in selected),\n\t\t'Elemente: {0}, Typen: {1}, eindeutige Kombinationen: {2}'.format(n_all, len(type_cache), len(combos)),\n\t\t'Siemens-typisch: {0} ({1})'.format(sum(s['siemens'] for s in cat_stats.values()),\n\t\t\tpercent(sum(s['siemens'] for s in cat_stats.values()), n_all)),\n\t\tZWP_LP8 + ' angehakt: {0}'.format(sum(s['lp8'] for s in cat_stats.values())),\n\t\t'Kostengruppen-Parameter gefunden: ' + (', '.join(sorted(n for n in params if KG_PARAM_PATTERN.search(n))) or 'keiner'),\n\t\t'Datenbank: ' + ('{0} Modellnamen fehlen'.format(missing) if database is not None else 'nicht angegeben'),\n\t\tlv_summary,\n\t\t'Verknuepfungen: {0} (geladen: {1})'.format(n_links, n_links_loaded),\n\t\t'Ansichtsfilter: {0}'.format(len(filters)),\n\t\t'Worksharing: ' + ('ja' if workshared else 'nein'),\n\t\t'Ergebnisordner: ' + folder,\n\t]\n\twith io.open(os.path.join(folder, '0_Zusammenfassung.txt'), 'w', encoding='utf-8-sig') as f:\n\t\tf.write(u'\\r\\n'.join(summary) + u'\\r\\n')\n\treturn '\\n'.join(summary)\n\n\nOUT = run()\n",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "7045e3e7fb174b7abd5ae5fc4c275c09",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "c61dd98b3a1d4b4c99433a53f0a1472d",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "e8bcea586fcf4e89b6cd85bb886b1b14",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "d2695111fcf14fa6a54cac1e931e4624",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "93fbf37d79b54294a75226fbc51e0020",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "a0779d16eb584ecca31bf6aa1c90a635",
+          "Name": "OUT",
+          "Description": "Ergebnis des Python-Skripts",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Führt ein eingebettetes Python-Skript aus."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 600.0,
+      "WatchHeight": 280.0,
+      "Id": "7356162bcef4498bb986011f08ec2e68",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "9ef555102886414da6c5b888c7e4ae58",
+          "Name": "",
+          "Description": "Knoten, der ausgewertet werden soll.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "d4f15cdfa46146b1a11783a0e7e4ccdc",
+          "Name": "",
+          "Description": "Knotenauswertung überwachen",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualisiert die Eingabe des Blocks als Ausgabe des Blocks"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "29aba2d9b64c498087c0c88c5b252c52",
+      "End": "c61dd98b3a1d4b4c99433a53f0a1472d",
+      "Id": "0359c7415f944c5cb24debfe06e55c2a",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "e8cfb21c096b4511953b18ebdde023bd",
+      "End": "e8bcea586fcf4e89b6cd85bb886b1b14",
+      "Id": "6c6f141c57ff4421b1a5a28263ab0c38",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "997fac681d2249c7a37982e3054aaef9",
+      "End": "d2695111fcf14fa6a54cac1e931e4624",
+      "Id": "eb4d15c3336842aa977c413df16c0868",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "f1ac44c7f4c140609983157eeaa22e1a",
+      "End": "93fbf37d79b54294a75226fbc51e0020",
+      "Id": "1418ea4fe047438ab6c13987277c2750",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "a0779d16eb584ecca31bf6aa1c90a635",
+      "End": "9ef555102886414da6c5b888c7e4ae58",
+      "Id": "d99b1391f196436b938441504768edf8",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "Keine",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 0.01,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "3.6.1.9895",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Hintergrundvorschau",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "0b17a9d9d99c42adb256ddd5441418a4",
+        "Name": "1 Datenbank-CSV (optional)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 0.0
+      },
+      {
+        "Id": "59b3fdc281224caa97ab44eb027100e7",
+        "Name": "2 LV-Datei aus SAP (optional)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 180.0
+      },
+      {
+        "Id": "c0df83b63b144ef3a70637aeb48601e5",
+        "Name": "3 Name eigener LV-Parameter",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 360.0
+      },
+      {
+        "Id": "98a7d620f75744feb5624b551dc17a39",
+        "Name": "4 Weitere Parameter (kommagetrennt)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 540.0
+      },
+      {
+        "Id": "7045e3e7fb174b7abd5ae5fc4c275c09",
+        "Name": "GA-Diagnose (nur lesen)",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 450.0,
+        "Y": 220.0
+      },
+      {
+        "Id": "7356162bcef4498bb986011f08ec2e68",
+        "Name": "Ergebnis",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": true,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 750.0,
+        "Y": 200.0
+      }
+    ],
+    "Annotations": [],
+    "X": 100.0,
+    "Y": 60.0,
+    "Zoom": 0.8
+  }
+}
