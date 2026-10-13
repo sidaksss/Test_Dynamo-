@@ -13,8 +13,12 @@ GA_Diagnose_<Zeitstempel> auf den Desktop (CSV, UTF-8 mit BOM, Trennzeichen ;):
   5b_Bauteile_ohne_LV.csv      e) Deckung Bauteile -> LV
   5c_Mengen_je_Leistungsnummer.csv  e) Soll (LV) gegen Ist (Modell), grob
   6_Verknuepfungen.csv         f) RVT-Verknuepfungen und ihre Elemente
-  7_Filter.csv                 g) Ansichtsfilter: welcher Parameter blendet aus?
-  8_Werte.csv                  h) Werteverteilung wichtiger Parameter (inkl. Arbeitssatz)
+  7_Filter.csv                 g) eigene Ansichtsfilter (ohne Planerfilter ZWP_): welcher Parameter blendet aus?
+  8_Werte.csv                  h) Werteverteilung wichtiger Parameter (Arbeitssatz, Kostengruppe,
+                                  Aenderungsdokumentation, Phasen)
+
+Parameter und Filter des Planers (Praefix ZWP_) werden bewusst NICHT ausgewertet:
+sie gehoeren nicht zur Siemens-Leistung.
   9_Verschachtelung.csv        i) verschachtelte Bauteile mit ihrem uebergeordneten Bauteil
 
 Inputs:  IN[0] Datenbank-CSV (Modell;LV-Nummer), optional
@@ -60,22 +64,22 @@ LV_PATH = text_input(IN[1])
 OWN_LV_PARAM = text_input(IN[2]) or 'LV_Nummer'
 EXTRA_PARAMS = [n.strip() for n in re.split(r'[;,]', text_input(IN[3])) if n.strip()]
 
-ZWP_LV = 'ZWP_400_LV_Position'
-ZWP_LP8 = 'ZWP_400_LP8_Abrechnung'
-ZWP_FILTER = 'ZWP_400_Auswahlfilter'
+PLANNER_PREFIX = 'ZWP_'  # Planerparameter/-filter: werden ignoriert
+# Aenderungsdokumentation nach Siemens-Praxis (Besprechung BIM-Expertin)
+CHANGE_TYPE = 'Änderungsart'
+CHANGE_PARAMS = [CHANGE_TYPE, 'Änderungsdatum', 'Nachtragsnummer', 'Nachtragsbezeichnung']
 RDS_NAMES = ['RDS_Code', 'RDS_Projekt', 'RDS_Bauabschnitt', 'RDS_Modul', 'RDS_Teilmodul',
 	'RDS_Gebaeude', 'RDS_Geschoss', 'RDS_Segment', 'RDS_Raum', 'RDS_System',
 	'RDS_Systemkennzeichnung', 'RDS_SystemNum', 'RDS_Funktion', 'RDS_FunktionsNum']
 
 # Parameter, deren Werte in 8_Werte.csv gezaehlt werden (plus Arbeitssatz).
-VALUE_PARAMS = ['ZWP_400_LV_Aufteilung', 'ZWP_400_Kostengruppe', 'ZWP_400_Gewerk', 'Gewerk',
-	'Kostengruppe', 'DIN 276', 'ZWP_450_Ausführungsart', 'ZWP_400_Listenfilter', 'ZWP_400_Freigegeben',
-	'ZWP_400_LP8_Abrechnung', 'RDS_System']
+VALUE_PARAMS = ['Kostengruppe', 'DIN 276', 'Gewerk'] + CHANGE_PARAMS + [
+	'Phase erstellt', 'Phase abgebrochen', 'RDS_System']
 MAX_VALUES = 60
 
 # ANNAHME: Parameternamen, die nach einer Kostengruppe aussehen.
 KG_PARAM_PATTERN = re.compile(r'kostengruppe|din.?276|(^|[_ ])kg($|[_ ])', re.IGNORECASE)
-# ANNAHME: Kostengruppe als dreistellige Zahl 410-499 im Familien-/Typnamen (z. B. ZWP_480_...).
+# ANNAHME: Kostengruppe als dreistellige Zahl 410-499 im Familien-/Typnamen (z. B. ..._480_...).
 KG_IN_NAME = re.compile(r'(?:^|[_ ])(4[1-9]\d)(?=[_ ]|$)')
 # ANNAHME: typische Anfaenge von Siemens-GA-/Brandschutz-Produktbezeichnungen.
 SIEMENS_CODE = re.compile(r'^(Q[A-Z]{2}\d|PX[A-Z0-9]|TX[A-Z]\d|DXR|POL\d|RD[A-Z]\d|RX[A-Z]\d|RAK'
@@ -502,6 +506,8 @@ def filter_rows():
 					u['views'].append(('Vorlage: ' if view.IsTemplate else '') + view.Name)
 	rows = []
 	for pfe in FilteredElementCollector(doc).OfClass(ParameterFilterElement):
+		if pfe.Name.startswith(PLANNER_PREFIX):
+			continue
 		try:
 			rules = describe_filter(pfe.GetElementFilter())
 		except Exception as ex:
@@ -562,10 +568,9 @@ def run():
 
 	for cat_name, cat_id, _ in selected:
 		cs = cat_stats.setdefault(cat_name, dict((k, 0) for k in (
-			'n', 'modell', 'rds_code', 'funktion', 'kommentar', 'zwp_lv', 'lp8', 'own_lv', 'kg_param',
+			'n', 'modell', 'rds_code', 'funktion', 'kommentar', 'own_lv', 'kg_param',
 			'kg_name', 'siemens', 'si_family', 'siemens_code', 'ga_function', 'nested', 'demolished',
-			'owned_other', 'siem_lp8', 'siem_not_lp8', 'lp8_not_siem', 'zwp_eq_own', 'zwp_ne_own',
-			'in_db', 'in_lv')))
+			'owned_other', 'aenderung', 'nachtrag', 'in_db', 'in_lv')))
 		cs['types'] = set()
 		for key in ('kg_values', 'letters', 'systems', 'worksets', 'kg_params'):
 			cs[key] = Counter()
@@ -594,8 +599,8 @@ def run():
 			hersteller = value_of(el, t, 'Hersteller', BuiltInParameter.ALL_MODEL_MANUFACTURER)
 			kommentar = value_of(el, None, 'Kommentare', BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)
 			rds = dict((n, value_of(el, t, n)) for n in ('RDS_Code', 'RDS_Funktion', 'RDS_System', 'RDS_Systemkennzeichnung'))
-			zwp_lv = value_of(el, t, ZWP_LV)
-			lp8 = value_of(el, t, ZWP_LP8) == '1'
+			aenderung = value_of(el, t, CHANGE_TYPE)
+			nachtrag = value_of(el, t, 'Nachtragsnummer') or value_of(el, t, 'Nachtragsbezeichnung')
 			own_lv = value_of(el, t, OWN_LV_PARAM)
 			siemens = is_siemens(hersteller, familie, modell)
 			funktion = real_function(rds['RDS_Funktion'])
@@ -612,6 +617,8 @@ def run():
 			kg_filled = False
 			for p in el.Parameters:
 				name = p.Definition.Name
+				if name.startswith(PLANNER_PREFIX):
+					continue
 				info = params.setdefault(name, {'E': 0, 'T': 0, 'E_filled': 0, 'T_filled': 0,
 					'storage': storage_name(p), 'shared': bool(getattr(p, 'IsShared', False)), 'cats': set()})
 				info['E'] += 1
@@ -627,6 +634,8 @@ def run():
 				ti['params'] = []
 				for p in t.Parameters:
 					name = p.Definition.Name
+					if name.startswith(PLANNER_PREFIX):
+						continue
 					filled = bool(param_text(p))
 					ti['params'].append((name, filled, storage_name(p), bool(getattr(p, 'IsShared', False))))
 					if filled and KG_PARAM_PATTERN.search(name):
@@ -639,7 +648,7 @@ def run():
 			cs['n'] += 1
 			cs['types'].add(tkey)
 			for flag, key in ((modell, 'modell'), (rds['RDS_Code'], 'rds_code'), (funktion, 'funktion'),
-					(kommentar, 'kommentar'), (zwp_lv, 'zwp_lv'), (lp8, 'lp8'), (own_lv, 'own_lv'),
+					(kommentar, 'kommentar'), (aenderung, 'aenderung'), (nachtrag, 'nachtrag'), (own_lv, 'own_lv'),
 					(kg_filled, 'kg_param'), (siemens, 'siemens'), (host is not None, 'nested'),
 					(is_demolished, 'demolished')):
 				if flag:
@@ -658,14 +667,6 @@ def run():
 			if kg_match:
 				cs['kg_name'] += 1
 				cs['kg_values'].add(kg_match.group(1))
-			if siemens and lp8:
-				cs['siem_lp8'] += 1
-			elif siemens:
-				cs['siem_not_lp8'] += 1
-			elif lp8:
-				cs['lp8_not_siem'] += 1
-			if zwp_lv and own_lv:
-				cs['zwp_eq_own' if nospace(zwp_lv) == nospace(own_lv) else 'zwp_ne_own'] += 1
 			ws_name = ''
 			if workshared:
 				try:
@@ -693,11 +694,9 @@ def run():
 			# b) Kombinationen
 			key = (cat_name, familie, typ, modell, rds['RDS_Funktion'], rds['RDS_System'],
 				rds['RDS_Systemkennzeichnung'], kommentar)
-			c = combos.setdefault(key, {'n': 0, 'lp8': 0, 'nested': 0, 'siemens': siemens,
+			c = combos.setdefault(key, {'n': 0, 'nested': 0, 'siemens': siemens,
 				'in_db': in_db, 'in_lv': in_lv, 'own_lv': Counter()})
 			c['n'] += 1
-			if lp8:
-				c['lp8'] += 1
 			if host is not None:
 				c['nested'] += 1
 			if own_lv:
@@ -763,22 +762,20 @@ def run():
 
 	# 1) Kategorien
 	rows = [['Kategorie', 'Exemplare', 'Typen', 'Modell gefuellt', 'RDS_Code gefuellt', 'RDS_Funktion gefuellt',
-		'Kommentar gefuellt', ZWP_LV + ' gefuellt', ZWP_LP8 + ' angehakt', OWN_LV_PARAM + ' gefuellt',
+		'Kommentar gefuellt', CHANGE_TYPE + ' gefuellt', 'Nachtragsnummer gefuellt', OWN_LV_PARAM + ' gefuellt',
 		'Kostengruppen-Parameter gefuellt', 'Kostengruppen-Parameter (Namen)', 'KG im Familien-/Typnamen', 'KG-Werte im Namen',
 		'Hersteller Siemens / SI_-Familie / Siemens-Code (eins davon)', 'davon SI_-Familie', 'Modell mit Siemens-Code',
 		'RDS-Funktion GA-typisch (B,K,M,P,Q,S)', 'RDS-Kennbuchstaben', 'RDS-Systeme (haeufigste)',
-		'Siemens-typisch UND LP8', 'Siemens-typisch OHNE LP8', 'LP8 OHNE Siemens-typisch',
-		'ZWP_LV = eigene LV', 'ZWP_LV <> eigene LV', 'Modell in Datenbank', 'Modell im LV',
+		'Modell in Datenbank', 'Modell im LV',
 		'verschachtelt (Unterfamilie)', 'Abbruchphase gesetzt', 'Arbeitssaetze', 'von anderen Benutzern belegt']]
 	for cat_name, _, _ in selected:
 		s = cat_stats[cat_name]
 		n = s['n']
 		pc = lambda k: '{0} ({1})'.format(s[k], percent(s[k], n))
 		rows.append([cat_name, n, len(s['types']), pc('modell'), pc('rds_code'), pc('funktion'), pc('kommentar'),
-			pc('zwp_lv'), pc('lp8'), pc('own_lv'), pc('kg_param'), ', '.join(sorted(s['kg_params'])),
+			pc('aenderung'), pc('nachtrag'), pc('own_lv'), pc('kg_param'), ', '.join(sorted(s['kg_params'])),
 			pc('kg_name'), top(s['kg_values']), pc('siemens'), pc('si_family'), pc('siemens_code'),
-			pc('ga_function'), top(s['letters'], 8), top(s['systems']), s['siem_lp8'], s['siem_not_lp8'],
-			s['lp8_not_siem'], s['zwp_eq_own'], s['zwp_ne_own'],
+			pc('ga_function'), top(s['letters'], 8), top(s['systems']),
 			pc('in_db') if database is not None else 'keine DB', pc('in_lv') if lv is not None else 'kein LV',
 			pc('nested'), pc('demolished'), top(s['worksets'], 3) if workshared else 'kein Worksharing',
 			s['owned_other'] if workshared else '-'])
@@ -786,11 +783,11 @@ def run():
 
 	# 2) Kombinationen
 	rows = [['Kategorie', 'Familie', 'Typ', 'Modell', 'RDS_Funktion', 'RDS_System', 'RDS_Systemkennzeichnung',
-		'Kommentar', 'Anzahl Exemplare', 'davon verschachtelt', 'davon LP8 angehakt', 'Siemens-typisch',
+		'Kommentar', 'Anzahl Exemplare', 'davon verschachtelt', 'Siemens-typisch',
 		'Modell in Datenbank', 'Modell im LV (Leistungsnummer)', 'vorhandene eigene LV-Nummer']]
 	for key in sorted(combos, key=lambda k: (k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7])):
 		c = combos[key]
-		rows.append(list(key) + [c['n'], c['nested'], c['lp8'], 'ja' if c['siemens'] else 'nein',
+		rows.append(list(key) + [c['n'], c['nested'], 'ja' if c['siemens'] else 'nein',
 			('ja' if c['in_db'] else 'nein') if database is not None else '',
 			(c['in_lv'] or 'nein') if lv is not None else '', top(c['own_lv'], 3)])
 	write_csv(os.path.join(folder, '2_Kombinationen.csv'), rows)
@@ -799,7 +796,7 @@ def run():
 	rows = [['Parameter', 'liegt am', 'Elemente mit Parameter am Exemplar', 'davon mit Wert (Ja/Nein: auch Nein)',
 		'Elemente mit Parameter am Typ', 'davon mit Wert (gewichtet mit Exemplaren)', 'Datentyp', 'gemeinsam genutzt', 'Kategorien',
 		'moeglicher Kostengruppen-Parameter']]
-	focus = set(['Modell', 'Kommentare', ZWP_LV, ZWP_LP8, ZWP_FILTER, OWN_LV_PARAM] + RDS_NAMES + EXTRA_PARAMS)
+	focus = set(['Modell', 'Kommentare', OWN_LV_PARAM] + CHANGE_PARAMS + RDS_NAMES + EXTRA_PARAMS)
 	for name in sorted(params, key=lambda n: (n not in focus, n.lower())):
 		info = params[name]
 		where = 'Exemplar und Typ' if info['E'] and info['T'] else ('Exemplar' if info['E'] else 'Typ')
@@ -936,7 +933,8 @@ def run():
 		'Elemente: {0}, Typen: {1}, eindeutige Kombinationen: {2}'.format(n_all, len(type_cache), len(combos)),
 		'Siemens-typisch: {0} ({1})'.format(sum(s['siemens'] for s in cat_stats.values()),
 			percent(sum(s['siemens'] for s in cat_stats.values()), n_all)),
-		ZWP_LP8 + ' angehakt: {0}'.format(sum(s['lp8'] for s in cat_stats.values())),
+		CHANGE_TYPE + ' gefuellt: {0}, Nachtragsnummer gefuellt: {1}'.format(
+			sum(s['aenderung'] for s in cat_stats.values()), sum(s['nachtrag'] for s in cat_stats.values())),
 		'Kostengruppen-Parameter gefunden: ' + (', '.join(sorted(n for n in params if KG_PARAM_PATTERN.search(n))) or 'keiner'),
 		'Datenbank: ' + ('{0} Modellnamen fehlen'.format(missing) if database is not None else 'nicht angegeben'),
 		lv_summary,

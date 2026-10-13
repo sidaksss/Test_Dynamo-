@@ -9,7 +9,8 @@
 > - der SAP-Beispielexport
 > - deine Antworten auf die 10 Fragen
 > - deine Screenshots aus dem Revit-Modell (Eigenschaften, Typeneigenschaften)
-> - `konzept/DIAGNOSE_AUSWERTUNG_2.md` (17.835 Elemente, 8 Kategorien)
+> - `konzept/DIAGNOSE_AUSWERTUNG_2.md` (17.835 Elemente, 8 Kategorien, Verknüpfungen, 322 Filter)
+> - die Besprechung mit einer BIM-Expertin bei Siemens zur heutigen Nachtragshandhabung (Kapitel 2.2)
 >
 > **Kennzeichnung im Text:**
 > - **[Befund]**: aus echten Daten belegt.
@@ -36,6 +37,16 @@
 3. Für Bauteile ohne „Modell“ (Generikfamilien, Trassen) ist der **Typname** der bessere Schlüssel. Die Zuordnung dafür wird einmal in einer kleinen Tabelle gepflegt. Eine KI kann einmalig Vorschläge machen.
 4. Kommt ein Produkt in mehreren LV-Abschnitten vor, entscheidet ein Mensch **einmal je Kombination aus Produkt und Anlage**, nicht je Bauteil. Eine Regel dafür gibt es nicht. **[deine Antwort 1]**
 5. So wird jede Information nur einmal gepflegt, wie du es forderst. Mehrfachpflege, die das Konzept fehleranfällig machen würde, entsteht nicht.
+
+### 0.1 Abgrenzung: Planerparameter werden nicht verwendet
+
+- Parameter und Filter mit dem Präfix **`ZWP_`** stammen vom Planer. Sie haben nichts mit der Siemens-Leistung zu tun.
+- Konzept und Skripte **lesen und schreiben sie nicht**. Das Diagnose-Skript blendet sie aus.
+- Verwendet werden nur:
+  - Revit-eigene Angaben: Kategorie, Familie, Typ, Modell, Hersteller, Arbeitssatz, Phasen, UniqueId,
+  - das RDS,
+  - die Siemens-eigene Änderungsdokumentation (Kapitel 2.2),
+  - eigene Parameter (Kapitel 5.4).
 
 ---
 
@@ -68,19 +79,19 @@
 | W5 | Ein Produkt kommt im LV in mehreren Positionen vor (Beispiel-LV: jedes Produkt 6–7-mal). Eine Regel RDS → LV-Abschnitt gibt es nicht. | SAP-Beispiel [Befund], deine Antwort 1 |
 | W6 | Das LV enthält kein RDS und keinen Langtext. | deine Antworten 2, 3 |
 | W7 | 69 Elemente sind verschachtelte Unterfamilien („UF“) → Gefahr der Doppelzählung. | Diagnose 1 [Befund]; ob sie wirklich verschachtelt sind, prüft die neue Diagnose |
-| W8 | `ZWP_…`-Parameter gehören dem Planer und werden **nur gelesen**. `ZWP_400_LP8_Abrechnung` war in Diagnose 1 **nirgends** gesetzt. | deine Vorgabe, Diagnose 1 |
+| W8 | Parameter mit dem Präfix `ZWP_` stammen vom Planer und sind für die Siemens-Leistung **irrelevant**. Sie werden nicht verwendet (Kapitel 0.1). | deine Vorgabe |
 | W9 | Masterpositionen können teilweise (nur einzelne Unterpositionen) im Nachtrag landen. | deine Antwort 8 |
 | W10 | Bei Siemens ist Copilot freigegeben, darin ist Claude nutzbar. | deine Antwort 9 |
 | W11 | Eine Fachperson kann ~50 Fälle von Hand prüfen, aber nicht 500. | deine Antwort 10 |
 | W12 | Der Fühler `WK_238` liegt im **Arbeitssatz** (Revit: „Bearbeitungsbereich“) `480_Gebäudeautomation`. Die Planer trennen GA-Bauteile offenbar über Arbeitssätze. | Screenshot [Befund für dieses Bauteil] |
-| W13 | `ZWP_400_Kostengruppe` existiert als **Typ**parameter, ist beim Typ `QAM2112.040` aber **leer**. | Screenshot [Befund] |
-| W14 | `ZWP_400_Freigegeben` ist ein Ja/Nein-Parameter am **Exemplar**, nur bei HLS-Bauteilen, und **nirgends gesetzt**. Das graue Häkchen im Screenshot bedeutet „kein Wert“. Damit scheidet er als Filterparameter vermutlich aus. | Diagnose 2 [Befund] |
 | W15 | Siemens arbeitet offenbar im **Planermodell**: Der Dateiname enthält „ZWP-5-ELT“, und der aktive Arbeitssatz „400_Koordination“ ist „nicht bearbeitbar“. | Screenshot [Annahme] |
-| W17 | `ZWP_400_LP8_Abrechnung`, `ZWP_400_LV_Position` und `ZWP_400_LV_Text` sind in allen 17.835 Elementen leer. | Diagnose 2 [Befund] |
 | W18 | Rund 2.000 Elemente liegen im Arbeitssatz `480_Gebäudeautomation` (≈ 11 %). Der Arbeitssatz trennt die Gewerke besser als das RDS-System. | Diagnose 2 [Befund/Annahme] |
 | W19 | 32 % der Elemente sind verschachtelt, in drei Arten: eigenes Produkt (z. B. Meldersockel), Doppelung des Hauptprodukts (z. B. 215 × `QMX3.P30` in allen QMX3-Geräten), Symbol. | Diagnose 2 [Befund] |
 | W20 | `SI_`-Familien sind die Siemens-**Bibliothek**, nicht nur Siemens-Produkte (z. B. Kameras anderer Hersteller). Siemens-Produkte gehören nicht automatisch zur GA (z. B. Brandmelder im Arbeitssatz 450). | Diagnose 2 [Befund] |
-| W16 | Am Typ stehen produktbezogene Angaben: Modell, Hersteller, Beschreibung („Luftkanaltemperaturfühler 400 mm, Pt1000“), Gewerk `COM`, Klassifizierungsnummer `23.85.80.11.21`. Am Exemplar stehen gerätebezogene Angaben: RDS, Kennzeichen, Kommentar, Datenpunktbeschreibung, Controller, Freigabe. | Screenshot [Befund] |
+| W21 | Alle 322 Ansichtsfilter im Planermodell trennen nur Gewerke und Systeme. **Keiner** blendet nach einem Änderungsstatus aus. Änderungsparameter (`Änderungsart`, `Nachtragsnummer`) gibt es im Planermodell nicht, Phasen werden nicht genutzt. | Diagnose 2 [Befund] |
+| W22 | Die 20 Verknüpfungen waren nicht geladen. Darunter ist ein Modell „MSR_Atrium_Komponenten“, das GA-Bauteile enthalten könnte. | Diagnose 2 [Befund]; Inhalt [Annahme] |
+| W23 | **Stand der Technik bei Siemens:** Änderungen werden am Bauteil über `Änderungsdatum` und `Änderungsart` dokumentiert. Entfallene Bauteile werden als „gelöscht“ markiert und per Filter ausgeblendet, statt gelöscht. Es gibt **keinen Vergleich** und **keine Auswertungsliste** für Vertrieb oder Projektleitung. | Besprechung BIM-Expertin |
+| W16 | Am Typ stehen produktbezogene Angaben: Modell, Hersteller, Beschreibung („Luftkanaltemperaturfühler 400 mm, Pt1000“), Gewerk `COM`, Klassifizierungsnummer `23.85.80.11.21`. Am Exemplar stehen gerätebezogene Angaben: RDS, Kennzeichen, Kommentar, Datenpunktbeschreibung, Controller. | Screenshot [Befund] |
 
 ### 2.1 Warum liegen die RDS-Angaben am Exemplar?
 
@@ -91,9 +102,38 @@ Faustregel in Revit:
 Das RDS-Kennzeichen beschreibt das einzelne eingebaute Gerät:
 - Es enthält Ort, Anlage und Zählnummer. Es soll genau **ein** Gerät eindeutig benennen.
 - Auch die Funktion hängt vom Einbauort ab: Derselbe Typ `QAM2112.040` misst einmal Zuluft, einmal Abluft (10 Kombinationen in Diagnose 1). Als Typparameter bräuchte man dafür viele Kopien desselben Typs.
-- Datenpunkt-, Controller- und Freigabeangaben gehören aus demselben Grund an das Exemplar.
+- Datenpunkt- und Controller-Angaben gehören aus demselben Grund an das Exemplar.
 
 **Folge für das Konzept:** Auch die LV-Position gehört an das Exemplar (5.4), denn sie hängt wie das RDS von der Anlage ab.
+
+### 2.2 Stand der Technik: So werden Nachträge heute modelliert
+
+Quelle: Besprechung mit einer BIM-Expertin bei Siemens (Werkmontageplanung, Leistungsphase 8, Feldgeräte).
+
+**Heute (Ist-Zustand):**
+
+| Baustein | Praxis |
+|---|---|
+| Änderung am Bauteil dokumentieren | Projektparameter **`Änderungsdatum`** und **`Änderungsart`**, z. B. „Verschiebung“ oder „gelöscht“. Bei wiederholten Änderungen eine Folge wie „A.1“, „A.2“. |
+| Entfallene Bauteile | werden **nicht gelöscht**, sondern als „gelöscht“ bzw. „entfernt“ markiert und per **Filter ausgeblendet**. So bleiben sie verfügbar, falls sie zurückkommen. |
+| Übersicht | Bauteilliste exportieren, um gelöschte und geänderte Elemente zu sehen |
+| Pläne | Markierung mit rotem Kreis oder Änderungswolke, Datum und Kurzbeschreibung |
+| Projektweite Nachverfolgung | offizielle Projektliste (Leitfaden Werkmontageplanung, SharePoint) |
+| Zuordnung zu einem Nachtrag | **nicht praktiziert**. Als Idee gibt es einen Parameter `Nachtragsnummer` bzw. `Nachtragsbezeichnung` (z. B. „Nachtrag 2“). |
+| Revit-Phasen („abgebrochen“) | als Möglichkeit diskutiert. Für Feldgeräte und kleinere GA-Projekte praktikabel, bei großen Kanalnetzen wegen Modellgröße weniger. |
+
+**Die Lücke, die die Bachelorarbeit schließt:**
+- Es findet **kein Vergleich** zwischen Modellständen statt.
+- Es entsteht **keine Auswertungsliste** (Mehrung, Minderung, Neu je LV-Position), die an Projektleitung oder Vertrieb zurückgeht und als Grundlage für das Nachtragsangebot dient.
+- Ein **endgültig gelöschtes** Bauteil taucht in keiner Bauteilliste mehr auf. Die Minderung geht verloren.
+
+**Wie das Konzept daran anknüpft:**
+1. **Momentaufnahmen + Versionsvergleich (Kapitel 6)** erkennen Änderungen **automatisch**, auch endgültig gelöschte Bauteile. Die fehlen dann in V1 gegenüber V0.
+2. Die vorhandene **Änderungsdokumentation** (`Änderungsart`, `Änderungsdatum`, optional `Nachtragsnummer`) wird **nicht ersetzt, sondern genutzt**:
+   - „gelöscht/entfernt“ gilt als **entfallen** (6.4);
+   - die Nachtragsnummer ordnet eine Änderung einem Nachtrag zu (6.10).
+3. Der Abgleich zwischen beiden (6.10) zeigt Änderungen, die **nicht dokumentiert** wurden. Das ist ein Qualitätsgewinn gegenüber heute.
+4. **Limitation für die Arbeit:** Das Konzept zielt auf Feldgeräte und kleinere GA-Bauteile. Für große Kanal- oder Trassennetze ist das Markieren statt Löschen wegen der Modellgröße nur eingeschränkt geeignet.
 
 ---
 
@@ -140,9 +180,9 @@ Die Entscheidung triffst **du**. Die Diagnose liefert dafür die Kriterien (Date
 | U1 Siemens-typisch | „Hersteller Siemens / SI_-Familie / Siemens-Code“, getrennt nach „davon SI_-Familie“ und „Modell mit Siemens-Code“ | **Nur Hinweis, kein Umfangskriterium** (W20): `SI_` = Siemens-Bibliothek, Siemens-Code = Siemens-Produkt, auch außerhalb der GA **[Annahme: Erkennungsmuster]** |
 | U2 GA-typische Funktion | „RDS-Funktion GA-typisch“ | Anteil mit RDS-Kennbuchstaben B, K, M, P, Q, S (messen, regeln, antreiben, anzeigen, stellen, bedienen) **[Annahme]** |
 | U3 Im LV vorhanden | „Modell im LV“ | Anteil, dessen Modell als Leistungsnummer im SAP-LV steht. **Das stärkste Kriterium**, denn das LV ist verbindlich. |
-| U4 Kostengruppe | „KG im Familien-/Typnamen“ und „Kostengruppen-Parameter“ | z. B. `ZWP_480_…` → KG 480 (Gebäudeautomation) **[Annahme]** |
-| U5 Planer-Kennzeichen | „ZWP_400_LP8_Abrechnung angehakt“ | nur verwendbar, wenn gepflegt (Regel R6) |
-| U6 Arbeitssatz | „Arbeitssaetze“ und `8_Werte.csv` | `480_Gebäudeautomation` (W12, W18). Nach Diagnose 2 das **stärkste Kriterium aus dem Modell**; zusammen mit `ZWP_400_LV_Aufteilung` und `ZWP_400_Kostengruppe` prüfen. **[Annahme, vom Planer bestätigen lassen]** |
+| U4 Kostengruppe | „KG im Familien-/Typnamen“ und „Kostengruppen-Parameter“ (`Kostengruppe`, `DIN 276`) | z. B. `…_480_…` im Familiennamen → KG 480 **[Annahme]**; die Parameter sind kaum gefüllt (Diagnose 2) |
+| U5 – | entfällt | Planerparameter werden nicht verwendet (0.1) |
+| U6 Arbeitssatz | „Arbeitssaetze“ und `8_Werte.csv` | `480_Gebäudeautomation` (W12, W18). Nach Diagnose 2 das **stärkste Kriterium aus dem Modell**. **[Annahme, vom Planer bestätigen lassen]** |
 
 **Vorschlag für eine Regel**, über die du entscheidest:
 - Ein Bauteil gehört zum Umfang, wenn es über die Kaskade einer LV-Position zugeordnet werden kann (U3 bzw. Typ-Tabelle).
@@ -182,7 +222,7 @@ Wichtig:
 
 ### 5.4 Zielparameter
 
-Es gilt: **eigene Parameter, am Exemplar, nie in `ZWP_…` schreiben.**
+Es gilt: **eigene Parameter, am Exemplar.** Planerparameter (`ZWP_…`) werden weder gelesen noch beschrieben (0.1).
 
 | Parameter (Vorschlag) | Ebene | Inhalt |
 |---|---|---|
@@ -290,14 +330,17 @@ Der Vergleich darf **nie** fragen, ob ein Bauteil sichtbar ist, sondern nur nach
    - Symbol ohne Produkt (z. B. „physischer Datenpunkt“): zählt nie.
 
    Die Entscheidung fällt einmal je Unterfamilien-Typ über den Mengenfaktor in T2. Grundlage ist `9_Verschachtelung.csv`.
-3. Der Parameter, nach dem die Ausblend-Filter des Planers arbeiten, hat den Wert für „entfallen“. Welcher das ist, zeigt `7_Filter.csv`. `ZWP_400_Freigegeben` ist es vermutlich nicht, denn er ist nirgends gesetzt (W14).
-4. Die Revit-Phase „Abgebrochen“ ist gesetzt (die Diagnose zählt das mit).
+3. Die Siemens-Änderungsdokumentation sagt „entfallen“: `Änderungsart` = „gelöscht“ oder „entfernt“ (Stand der Technik, 2.2). Die Werte werden nur gelesen.
+4. Die Revit-Phase „Abgebrochen“ ist gesetzt. Das ist optional und sinnvoll für Feldgeräte (2.2).
 
-**So findest du heraus, nach welchem Parameter die Filter arbeiten:**
-- Die Diagnose schreibt `7_Filter.csv`.
-- Darin steht für jeden Ansichtsfilter: Name, Kategorien, **Regeln** (Parameter, Vergleich, Wert) und in wie vielen Ansichten bzw. Vorlagen er etwas **ausblendet**.
-- Der Filter, der in den GA-Ansichten ausblendet, verrät den Parameter.
-- Wir lesen ihn nur. Ist es ein `ZWP_…`-Parameter, ist das in Ordnung, denn Lesen ist erlaubt.
+**Ergebnis der Filterprüfung (Diagnose 2):**
+- Die 322 Filter im Planermodell blenden nur nach Gewerk, System und Typ aus. **Keiner** arbeitet mit einem Änderungsstatus (W21).
+- Für entfallene Siemens-Bauteile gilt deshalb Punkt 3.
+- Die Diagnose zeigt in `8_Werte.csv`, ob und mit welchen Werten `Änderungsart` und die Phasen in einem Modell gepflegt sind.
+
+**Vorteil des Versionsvergleichs:**
+- Auch wenn jemand ein Bauteil **endgültig löscht**, statt es zu markieren, fehlt es in V1 gegenüber V0 und wird als ENTFALLEN erkannt.
+- Die Minderung geht also nicht verloren. Das war das in der Besprechung genannte Problem.
 
 ### 6.5 Mengen in LV-Einheiten je LV-Position
 
@@ -350,7 +393,7 @@ Mit dem SAP-Einheitspreis lässt sich der Betrag je Zeile dazurechnen.
 | Schreiben (Zuweisung) | ja, wenn erlaubt und nicht belegt | **nein**: Ein Link kann aus dem offenen Modell heraus nicht geändert werden |
 
 - In Diagnose 1 lagen 10.882 Elemente der untersuchten Kategorien **im offenen Modell**, darunter alle Siemens-Familien.
-- Ob zusätzlich GA-Bauteile in Links liegen, zeigt `6_Verknuepfungen.csv`.
+- In Diagnose 2 waren alle 20 Verknüpfungen **nicht geladen**. Darunter ist ein Modell „MSR_Atrium_Komponenten“, das GA-Bauteile enthalten könnte (W22). Dieses eine Modell laden und die Diagnose wiederholen.
 - Link-Bauteile werden in der Momentaufnahme mit „Verknüpfung + UniqueId“ geführt. Ihre Zuordnung steht dann **nur** in der Momentaufnahme, nicht in einem Parameter.
 
 ### 6.8 Worksharing: Muss überhaupt geschrieben werden?
@@ -383,13 +426,32 @@ Mit dem SAP-Einheitspreis lässt sich der Betrag je Zeile dazurechnen.
 | liest `LV_Positionsnummer` am Element, überspringt Bauteile ohne Wert | Zuordnung aus Kapitel 5; fehlt sie, wird das gemeldet statt übersprungen |
 | JSON-Snapshot nur mit zugeordneten Elementen | Momentaufnahme (CSV) aller Bauteile im Umfang nach 6.2 |
 | zählt Elemente | zählt Grundmenge × Mengenfaktor in LV-Einheit (6.5) |
-| kennt kein „entfallen“ | entfallen nach Filterparameter / Abbruchphase (6.4) |
+| kennt kein „entfallen“ | entfallen nach `Änderungsart` / Abbruchphase / fehlt im neuen Stand (6.4); Zuordnung zum Nachtrag über `Nachtragsnummer` (6.10) |
 | zählt Unterfamilien mit | zählt verschachtelte Bauteile nur nach Mengenfaktor aus T2 (6.4) |
 | nur offenes Modell | auch Bauteile aus Verknüpfungen (6.7) |
 | `IntegerValue` | sicherer Weg über `Value` (Revit 2026) |
 | schreibt Nachtragsstatus in Bauteile | Vergleich rein lesend; Schreiben optional (6.8) |
 | Bewertung je LV-Position | je **Unterposition**, Master als Summe; Austauschpaare über RDS (6.3) |
 | keine Soll/Ist-Prüfung | Soll/Ist gegen das SAP-LV als Gegenprobe (6.1) |
+
+---
+
+### 6.10 Zusammenspiel mit der Änderungsdokumentation
+
+Versionsvergleich (automatisch) und Änderungsdokumentation (von Hand, Stand der Technik) ergänzen sich:
+
+| Versionsvergleich sagt | Dokumentation sagt | Ergebnis |
+|---|---|---|
+| geändert / neu / entfallen | `Änderungsart` gesetzt, `Nachtragsnummer` = „Nachtrag 2“ | **zugeordnet** zu Nachtrag 2 |
+| geändert / neu / entfallen | nichts dokumentiert | **undokumentierte Änderung** → Prüfliste |
+| unverändert | `Änderungsart` gesetzt | **dokumentiert, aber im Modell nicht nachvollziehbar** → Prüfliste |
+
+- Damit lässt sich die Auswertungsliste **je Nachtrag** ausgeben, z. B. „Nachtrag 2: Mehrungen und Minderungen je LV-Position“.
+- **Standardisierte Werte:** Die Werte für `Änderungsart` (und ggf. `Nachtragsnummer`) sollten aus einer festen Liste kommen. In Revit geht das über eine **Schlüsselbauteilliste**: Der Parameter erscheint dann als Auswahlliste. Das entspricht der in der Besprechung erwogenen Auswahl per Dropdown. **[Annahme: im Siemens-Modell umsetzbar]**
+- Die Auswertungsliste kann als Anlage zur offiziellen Projektliste (SharePoint) dienen.
+- **Wer schreibt was:**
+  - Die BIM-Modellierung pflegt wie heute `Änderungsart` und `Änderungsdatum`, neu dazu die `Nachtragsnummer`. Das ist ein Wert je Änderung, also keine Mehrfachpflege.
+  - Die Skripte lesen diese Werte nur.
 
 ---
 
@@ -450,7 +512,7 @@ Alle Schwellen sind **[Annahmen]** und sollten nach dem nächsten Diagnoselauf g
 | **R3** KI-Vorschlag lohnt | > 100 offene Typ-Kombinationen nach Stufe 1–2 | Variante a) nutzen; darunter von Hand |
 | **R4** RDS als Schlüssel zulässig | in `2_Kombinationen.csv` gehört jeder RDS-Schlüssel (System \| Funktion) bei ≥ 95 % der Elemente zu genau einem Produkt | Diagnose 1: **70 % → nicht erfüllt**, RDS nur zur Plausibilitätsprüfung |
 | **R5** T3 nötig | `5a_LV_Positionen.csv` enthält „Position mehrdeutig“ | Abschnitts-Entscheidungen einmalig sammeln |
-| **R6** `ZWP_400_LP8_Abrechnung` als Umfangsfilter geeignet | angehakt bei ≥ 90 % der Bauteile, die über das LV im Umfang sind, **und** bei ≤ 5 % der Bauteile außerhalb (Spalten „Siemens-typisch UND/OHNE LP8“, „LP8 OHNE Siemens-typisch“) | Diagnose 1 und 2: **0 angehakt (0 von 17.830) → ungeeignet**; höchstens später als zusätzlicher Hinweis |
+| **R6** Änderungsdokumentation nutzbar | `Änderungsart` ist vorhanden und bei geänderten Bauteilen gefüllt (`1_Kategorien.csv`, `8_Werte.csv`) | Abgleich nach 6.10; sonst nur Versionsvergleich. Diagnose 2 (Planermodell): **nicht vorhanden** |
 | **R7** Link-Weg nötig | `6_Verknuepfungen.csv` zeigt Siemens-typische Bauteile in Links | Zuordnung nur in der Momentaufnahme (6.7) |
 | **R8** Kategorie in den Umfang aufnehmen | U3 > 0 oder U1 ≥ 20 % oder U2 ≥ 50 % (Kapitel 5.1) | Kandidat; **du entscheidest** |
 
@@ -462,7 +524,7 @@ Alle Schwellen sind **[Annahmen]** und sollten nach dem nächsten Diagnoselauf g
 
 | Stufe | Inhalt | Ergebnis |
 |---|---|---|
-| **0 Messen** (jetzt) | `GA_Diagnose.dyn` mit deinen 8 Kandidat-Kategorien, der Datenbank-CSV und **dem SAP-LV dieses Projekts** | Umfang festlegen (R8), R1–R7 auswerten, Filterparameter finden, Links und Worksharing klären |
+| **0 Messen** (jetzt) | `GA_Diagnose.dyn` mit deinen 8 Kandidat-Kategorien, der Datenbank-CSV und **dem SAP-LV dieses Projekts** | Umfang festlegen (R8), R1–R7 auswerten, Änderungsdokumentation prüfen, Links und Worksharing klären |
 | **1 Minimalversion** | Momentaufnahme mit Kaskade Stufen 0–2 und 5; Schreiben in eigene Exemplarparameter optional (6.8); Prüf-/Fehlerliste je Kombination; belegte Bauteile melden | erste Trefferquote |
 | **2 Tabellen** | T2 (Typ-Tabelle) und T3 (Abschnitts-Tabelle) mit Prüfliste → Übernahme | volle Abdeckung, Pflege nur einmal |
 | **3 KI** | Variante a) über Copilot für die offenen T2-Zeilen (nur, wenn R3 zutrifft) | weniger Handarbeit, messbar |
@@ -509,7 +571,7 @@ Der Engpass ist nicht das Programmieren, sondern die **Testrunden in echtem Revi
 **Zu deinem Einwand bei Frage 10 (Skalierbarkeit):**
 - Die Prüfung von Hand ist **keine** Daueraufgabe. Sie findet **einmal für die Arbeit** statt, als Stichprobe, um die Güte zu messen.
 - Gezogen wird eine Zufallsstichprobe von **50 Kombinationen**, nicht 500 Bauteilen. 50 Kombinationen können je nach Modell tausende Bauteile abdecken.
-- Im laufenden Betrieb messen sich K1 und K4–K10 automatisch. Nur K2 und K3 brauchen die Stichprobe.
+- Im laufenden Betrieb messen sich K1 und K4–K11 automatisch. Nur K2 und K3 brauchen die Stichprobe.
 
 | Nr. | Kennzahl | Formel | Quelle |
 |---|---|---|---|
@@ -523,6 +585,7 @@ Der Engpass ist nicht das Programmieren, sondern die **Testrunden in echtem Revi
 | K8 | **Soll/Ist-Abweichung** | je Position \|Modellmenge − LV-Menge\| ÷ LV-Menge | Diagnose 5c / Modul 2 |
 | K9 | **Wiederverwendung** | Anteil Kombinationen eines neuen Modellstands, die schon entschieden sind | Skriptbericht |
 | K10 | **Datenqualität** | Anteil Modell gefüllt, RDS gefüllt, verschachtelte Bauteile, doppelte RDS-Codes | Diagnose |
+| K11 | **Dokumentationsquote** | im Versionsvergleich erkannte Änderungen mit gepflegter `Änderungsart`/`Nachtragsnummer` ÷ alle erkannten Änderungen (6.10) | Modul 2 |
 
 K7 und K9 belegen deine Kernforderung **„Pflege nur einmal“** mit Zahlen.
 
@@ -532,16 +595,17 @@ K7 und K9 belegen deine Kernforderung **„Pflege nur einmal“** mit Zahlen.
 
 | Nr. | Frage | Stand |
 |---|---|---|
-| F1 | Nach welchem Parameter arbeiten eure Ausblend-Filter? | **wird durch `7_Filter.csv` beantwortet** (Datei steht noch aus). `ZWP_400_Freigegeben` scheidet vermutlich aus (W14). |
+| F1 | Nach welchem Parameter arbeiten eure Ausblend-Filter? | **Beantwortet:** Die Filter im Planermodell kennen keinen Änderungsstatus (W21). „Entfallen“ wird über `Änderungsart` nach Siemens-Praxis abgebildet (6.4). |
 | F2 | Arbeitet Siemens in LP 8 im Planermodell oder in einem eigenen Modell mit Links? | Screenshot deutet auf das **Planermodell** (W15); bitte bestätigen. Wichtig für 6.7 und 6.8. |
-| F3 | Gibt es einen Kostengruppen-Parameter? | **Beantwortet: ja, drei.** `ZWP_400_Kostengruppe` (Typ, 43 % mit Wert), `Kostengruppe` (Typ, 318 Elemente), `DIN 276` (Exemplar, leer). Die Werte zeigt `8_Werte.csv`. |
-| F4 | Wer pflegt `ZWP_400_LP8_Abrechnung`, und wie verlässlich? | Diagnose 1: nirgends gesetzt. Wer es pflegen soll, kann nur der Planer bzw. die Projektleitung beantworten. |
+| F3 | Gibt es einen Kostengruppen-Parameter? | **Beantwortet:** `Kostengruppe` (Typ, 318 Elemente) und `DIN 276` (Exemplar, leer). Für den Umfang taugt der Arbeitssatz besser (U6). |
+| F4 | In welchem Modell pflegt Siemens die Änderungsdokumentation (`Änderungsart`, `Änderungsdatum`), im eigenen Werkmontagemodell? Dürfen Parameternamen und Werteliste (inkl. `Nachtragsnummer`) für das Konzept als Standard festgelegt werden? | offen (2.2, 6.10) |
 | F5 | Gehört zu einem RDS-Schlüssel immer genau eine LV-Position? | **beantwortet: Nein** (Kapitel 3, mit Daten belegt) |
 | F6 | Darf Siemens im Planermodell eigene Parameter anlegen und beschreiben, und auf welchem Arbeitssatz? | offen |
-| F7 | Gehören Kabeltrassen der KG 480 (`ZWP_480_Kabelrinne`, `…Kabelleiter`) zum Siemens-LV? Wenn ja: Abrechnung in Metern, Formteile im Meterpreis? | offen (aus Diagnose-Auswertung 1) |
+| F7 | Gehören Kabeltrassen der KG 480 zum Siemens-LV? Wenn ja: Abrechnung in Metern, Formteile im Meterpreis? | offen (aus Diagnose-Auswertung 1) |
 | F8 | Gibt es eine Copilot-Variante mit API-Zugang (für Variante b)? | nur relevant, falls b) später gewünscht |
 | F9 | Kannst du den SAP-LV-Export **dieses Projekts** für den Diagnoselauf verwenden? | Er bleibt auf deinem Rechner; ins öffentliche Repository kommt er nicht. |
 | F10 | Liegen **alle** Siemens-Bauteile im Arbeitssatz `480_Gebäudeautomation`, und liegen dort **nur** Siemens-Bauteile? | Diagnose zeigt die Arbeitssätze je Kategorie; die Regel kann nur der Planer bestätigen (U6). |
 | F11 | Welche zwei Modellstände (z. B. V29 und V30) können für den ersten Versionsvergleich genutzt werden? | nötig für Stufe 4 |
 | F12 | Gehören Brandmeldeanlage und Sicherheitstechnik in diesem Projekt zum Siemens-LV oder nur die GA? | offen (W20) |
-| F13 | Was bedeutet `ZWP_400_LV_Aufteilung` (Wert bei 10.042 Elementen)? | Werte zeigt `8_Werte.csv`; Bedeutung kennt der Planer |
+| F13 | Enthält die Verknüpfung „MSR_Atrium_Komponenten“ GA-Bauteile, die zu Siemens gehören? | Verknüpfung laden, Diagnose wiederholen (W22) |
+| F14 | Kannst du den Leitfaden Werkmontageplanung (SharePoint) bereitstellen, sobald du ihn hast? | für die Einordnung der offiziellen Projektliste |
