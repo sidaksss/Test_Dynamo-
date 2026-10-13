@@ -1,0 +1,366 @@
+{
+  "Uuid": "41958cfb-323e-444c-b18a-e960e0b4049f",
+  "IsCustomNode": false,
+  "Description": "LV-Zuordnung v2: Datenbank und SAP-LV, Ähnlichkeitssuche über alle Bauteilparameter, Vorschlagsliste und Copilot-Anfrage. Schreibt nur sichere Treffer und nur, wenn eingeschaltet.",
+  "Name": "LV_Zuordnung_v2",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [
+    {
+      "Id": "a80c34564cf14988a51f12b569cad8f7",
+      "Name": "1 SAP-LV (.xlsx)",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "69e46f155e14411abcd6067b26ce792f",
+      "Name": "2 Datenbank-CSV",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "ff51f1ebcb5c4df6a9f0a27806061134",
+      "Name": "3 Zielparameter",
+      "Type": "string",
+      "Type2": "string",
+      "Value": "LV_Nummer",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "SelectedIndex": 0
+    },
+    {
+      "Id": "1980856ddb464c11ac7b80c4f0f9f175",
+      "Name": "4 In Modell schreiben",
+      "Type": "boolean",
+      "Type2": "boolean",
+      "Value": "false",
+      "Description": "Ermöglicht die Auswahl zwischen True und False",
+      "SelectedIndex": 0
+    }
+  ],
+  "Outputs": [
+    {
+      "Id": "884ac503008242d38a80c44850136bac",
+      "Name": "Ergebnis",
+      "Type": "unknown",
+      "InitialValue": "",
+      "Description": "Visualisiert die Eingabe des Blocks als Ausgabe des Blocks"
+    }
+  ],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "a80c34564cf14988a51f12b569cad8f7",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "dd11d7b45f554be59931acac4163597c",
+          "Name": "",
+          "Description": "Dateipfad",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "HintPath": "",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "69e46f155e14411abcd6067b26ce792f",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "d261bfb431f84a89988d1381a9e8cead",
+          "Name": "",
+          "Description": "Dateipfad",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Ermöglicht die Auswahl einer Datei auf dem System und gibt ihren Dateipfad zurück",
+      "HintPath": "",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.StringInput, CoreNodeModels",
+      "Id": "ff51f1ebcb5c4df6a9f0a27806061134",
+      "NodeType": "StringInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "915922f644134ce6b45ce6fb2bc82471",
+          "Name": "",
+          "Description": "String",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Erstellt eine Zeichenfolge.",
+      "InputValue": "LV_Nummer"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "Id": "1980856ddb464c11ac7b80c4f0f9f175",
+      "NodeType": "BooleanInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "4456f2525bfa4d1aad5f38e8ce046f3f",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Ermöglicht die Auswahl zwischen True und False",
+      "InputValue": false
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"Dynamo Python Script node: LV-Zuordnung v2 (Erweiterung von\nlv_mapping/lv_nummer_zuweisen.py).\n\nAblauf je Bauteil der gewaehlten Kategorien:\n  0. LV-Nummer schon vorhanden            -> behalten (nie ueberschreiben)\n  1. Datenbank-CSV: Modell / Typname        -> LV-Nummer      (sicher)\n  2. SAP-LV: Modell = Leistungsnummer, L-Identifizierer oder Materialnummer\n  3. SAP-LV: Leistungsnummer steckt im Typ- oder Familiennamen\n     -> genau eine LV-Position: sicher; mehrere: Vorschlagsliste \"mehrdeutig\"\n  4. Aehnlichkeitssuche ueber ALLE Text-Parameter des Bauteils gegen\n     Leistungsnummer, Hersteller-Typ und Kurztext im SAP-LV\n     -> nur Vorschlag mit Punktzahl, wird NIE automatisch geschrieben\n\nGeschrieben wird nur, wenn IN[3] = True, und nur bei sicheren Treffern\n(Stufen 1-3, eindeutig). Alles andere landet in der Vorschlagsliste\n(eine Zeile je Kombination). Bestaetigte Zeilen werden in die\nDatenbank-CSV uebernommen und gelten ab dem naechsten Lauf (Pflege nur einmal).\n\nInputs:  IN[0] SAP-LV-Export (.xlsx), optional\n         IN[1] Datenbank-CSV (Schluessel;LV-Nummer), optional\n         IN[2] Name des Zielparameters (leer = 'LV_Nummer')\n         IN[3] In Modell schreiben (True/False, Standard False = Testlauf)\nOutput:  Zusammenfassung als Text; Dateien in LV_Zuordnung_<Zeit> auf dem Desktop.\n\nPlanerparameter (Praefix ZWP_) werden nicht gelesen.\nStatus: Prototyp, nur gegen Beispieldaten getestet. Test in echtem Revit steht aus.\nKompatibel mit CPython3 und PythonNet3 (keine f-Strings).\"\"\"\n\nimport datetime\nimport difflib\nimport io\nimport os\nimport re\nimport zipfile\nimport xml.etree.ElementTree as ET\n\nimport clr\nclr.AddReference('RevitAPI')\nclr.AddReference('RevitServices')\nclr.AddReference('System.Windows.Forms')\nclr.AddReference('System.Drawing')\nimport System\nfrom Autodesk.Revit.DB import (BuiltInParameter, CategoryType,\n\tFilteredElementCollector, StorageType)\nfrom RevitServices.Persistence import DocumentManager\nfrom RevitServices.Transactions import TransactionManager\nfrom System.Drawing import Point, Size\nfrom System.Windows.Forms import (Button, CheckedListBox, DialogResult,\n\tDockStyle, Form, FormStartPosition, Label, Panel)\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\n\ndef text_input(value):\n\treturn '' if value is None else str(value).strip()\n\n\nSAP_PATH = text_input(IN[0])\nDB_PATH = text_input(IN[1])\nTARGET = text_input(IN[2]) or 'LV_Nummer'\nWRITE = IN[3] is True\n\nPLANNER_PREFIX = 'ZWP_'\n# ANNAHME: Grenzen fuer die Punktzahl der Aehnlichkeitssuche (0..1)\nSTRONG = 0.75\nMEDIUM = 0.5\nMIN_SCORE = 0.2  # darunter kein Vorschlag\nMAX_SUGGESTIONS = 3\n# Woerter ohne Aussagekraft fuer den Vergleich\nSTOPWORDS = set(['fuer', 'für', 'mit', 'und', 'oder', 'der', 'die', 'das', 'den', 'dem', 'ein', 'eine',\n\t'von', 'zur', 'zum', 'bis', 'auf', 'aus', 'bei', 'als', 'inkl', 'typ', 'type', 'st', 'stk', 'mm', 'nein', 'ja'])\n\n\n# --- Texte normalisieren ---------------------------------------------------\n\ndef collapse(text):\n\treturn re.sub(r'\\s+', ' ', text or '').strip().upper()\n\n\ndef nospace(text):\n\treturn re.sub(r'\\s+', '', text or '').upper()\n\n\ndef model_keys(text):\n\t\"\"\"Vergleichsschluessel: ganz ohne Leerzeichen, erstes Wort, erste zwei Woerter.\"\"\"\n\twords = collapse(text).split(' ')\n\tresult = []\n\tfor c in (''.join(words), words[0], ''.join(words[:2])):\n\t\tif c and c not in result:\n\t\t\tresult.append(c)\n\treturn result\n\n\ndef tokens(text):\n\twords = re.split(r'[^0-9A-Za-zÄÖÜäöüß.\\-/]+', (text or '').lower())\n\tresult = set()\n\tfor w in words:\n\t\tw = w.strip('.-/')\n\t\tif len(w) < 2 or w in STOPWORDS or re.match(r'^[\\d.,\\-/]+$', w):\n\t\t\tcontinue\n\t\tresult.add(w)\n\treturn result\n\n\ndef is_code(token):\n\t\"\"\"Produktcode: Buchstaben und Ziffern gemischt, z. B. qam2112.040.\"\"\"\n\treturn bool(re.search(r'[a-zäöü]', token)) and bool(re.search(r'\\d', token))\n\n\n# --- Datenbank-CSV und SAP-LV ------------------------------------------------\n\ndef read_lines(path):\n\tfor encoding in ('utf-8-sig', 'cp1252'):\n\t\ttry:\n\t\t\twith io.open(path, 'r', encoding=encoding) as f:\n\t\t\t\treturn f.read().splitlines()\n\t\texcept UnicodeDecodeError:\n\t\t\tcontinue\n\treturn []\n\n\ndef read_database(path):\n\t\"\"\"Schluessel (Modell oder Typname) -> LV-Nummer. Weitere Spalten werden ignoriert.\"\"\"\n\tmapping = {}\n\tconflicts = set()\n\tfor line in read_lines(path):\n\t\tcleaned = line.replace('\"', '').strip().strip(';,\\t ')\n\t\tparts = re.split(r'[;\\t]', cleaned)\n\t\tif len(parts) < 2:\n\t\t\tparts = cleaned.split(',')\n\t\tif len(parts) < 2 or not parts[0].strip() or not parts[1].strip():\n\t\t\tcontinue\n\t\tkey = nospace(parts[0])\n\t\tif key in ('MODELL', 'MODEL', 'TYPNAME', 'TYP', 'SCHLUESSEL', 'SCHLÜSSEL'):\n\t\t\tcontinue\n\t\tlv = parts[1].strip()\n\t\tif key in mapping and mapping[key] != lv:\n\t\t\tconflicts.add(key)\n\t\tmapping.setdefault(key, lv)\n\treturn mapping, conflicts\n\n\ndef read_xlsx_rows(path):\n\tns = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'\n\twith zipfile.ZipFile(path) as z:\n\t\tnames = z.namelist()\n\t\tshared = []\n\t\tif 'xl/sharedStrings.xml' in names:\n\t\t\tfor si in ET.fromstring(z.read('xl/sharedStrings.xml')).findall(ns + 'si'):\n\t\t\t\tshared.append(''.join(t.text or '' for t in si.iter(ns + 't')))\n\t\tsheets = sorted(n for n in names if n.startswith('xl/worksheets/sheet'))\n\t\tsheet = ET.fromstring(z.read('xl/worksheets/sheet1.xml' if 'xl/worksheets/sheet1.xml' in names else sheets[0]))\n\trows = []\n\tfor row in sheet.find(ns + 'sheetData').findall(ns + 'row'):\n\t\tvalues = {}\n\t\tfor c in row.findall(ns + 'c'):\n\t\t\tletters = re.match(r'[A-Z]+', c.get('r')).group(0)\n\t\t\tcol = 0\n\t\t\tfor ch in letters:\n\t\t\t\tcol = col * 26 + ord(ch) - 64\n\t\t\tkind = c.get('t')\n\t\t\tif kind == 'inlineStr':\n\t\t\t\ttext = ''.join(t.text or '' for t in c.iter(ns + 't'))\n\t\t\telse:\n\t\t\t\tv = c.find(ns + 'v')\n\t\t\t\ttext = v.text if v is not None and v.text is not None else ''\n\t\t\t\tif kind == 's' and text:\n\t\t\t\t\ttext = shared[int(text)]\n\t\t\tvalues[col - 1] = text\n\t\twidth = max(values) + 1 if values else 0\n\t\trows.append([values.get(i, '') for i in range(width)])\n\treturn rows\n\n\ndef read_sap(path):\n\t\"\"\"Abrechenbare Zeilen des SAP-LV (ohne Titel-, Hinweis- und Masterzeilen).\"\"\"\n\trows = read_xlsx_rows(path)\n\theader = [h.strip().lower() for h in rows[0]]\n\n\tdef col(*names):\n\t\tfor n in names:\n\t\t\tif n.lower() in header:\n\t\t\t\treturn header.index(n.lower())\n\t\treturn None\n\n\tc = dict(pos=col('ext. Leistungsnummer', 'LV-Positionsnummer', 'Positionsnummer'), nr=col('Leistungsnummer'),\n\t\tlid=col('L-Identifizierer'), mat=col('Materialnummer'), typ=col('Objekttyp'),\n\t\tt1=col('Kurztextzeile 1', 'Kurztext'), t2=col('Kurztextzeile 2'), einheit=col('Basismengeneinheit'))\n\tpositions = []\n\tfor row in rows[1:]:\n\t\tget = lambda k: row[c[k]].strip() if c[k] is not None and c[k] < len(row) else ''\n\t\tif not get('pos') or not get('nr') or get('typ') == 'M':\n\t\t\tcontinue\n\t\ttext = (get('t1') + ' ' + get('t2')).strip()\n\t\tcodes = []\n\t\tfor k in ('nr', 'lid', 'mat'):\n\t\t\tif get(k) and nospace(get(k)) not in codes:\n\t\t\t\tcodes.append(nospace(get(k)))\n\t\tpositions.append({'pos': get('pos'), 'nr': get('nr'), 'codes': codes, 'text': text,\n\t\t\t'einheit': get('einheit'), 'tokens': tokens(text + ' ' + ' '.join([get('nr'), get('lid'), get('mat')]))})\n\treturn positions\n\n\n# --- Stufen 2-4 ----------------------------------------------------------------\n\ndef exact_matches(sap, modell, typ, familie):\n\t\"\"\"Stufe 2 (Modell) und 3 (Typ-/Familienname). Gibt (Stufe, Positionen) zurueck.\"\"\"\n\tkeys = model_keys(modell)\n\thits = [p for p in sap if any(k in p['codes'] for k in keys)]\n\tif hits:\n\t\treturn 'Modell = Leistungsnummer', hits\n\tnames = nospace(typ) + '|' + nospace(familie)\n\thits = [p for p in sap if any(len(code) >= 5 and code in names for code in p['codes'])]\n\tif hits:\n\t\treturn 'Leistungsnummer im Typ-/Familiennamen', hits\n\treturn '', []\n\n\ndef similarity(element_tokens, product_text, position):\n\t\"\"\"Punktzahl 0..1 aus Produktcode-, Wort- und Textaehnlichkeit.\"\"\"\n\tlv_tokens = position['tokens']\n\tif not lv_tokens:\n\t\treturn 0.0\n\thit = 0.0\n\tweight = 0.0\n\tfor t in lv_tokens:\n\t\tw = 3.0 if is_code(t) else 1.0\n\t\tweight += w\n\t\tif t in element_tokens:\n\t\t\thit += w\n\t\telif len(t) >= 5 and any(t in e or (len(e) >= 5 and e in t) for e in element_tokens):\n\t\t\thit += w * 0.5\n\tword_score = hit / weight\n\ttext_score = difflib.SequenceMatcher(None, product_text.lower(), position['text'].lower()).ratio() if product_text else 0.0\n\treturn round(0.7 * word_score + 0.3 * text_score, 2)\n\n\ndef suggest(sap, element_tokens, product_text):\n\tscored = []\n\tfor p in sap:\n\t\tscore = similarity(element_tokens, product_text, p)\n\t\tif score >= MIN_SCORE:\n\t\t\tscored.append((score, p))\n\tscored.sort(key=lambda sp: (-sp[0], sp[1]['pos']))\n\treturn scored[:MAX_SUGGESTIONS]\n\n\ndef rating(score):\n\tif score >= STRONG:\n\t\treturn 'stark'\n\tif score >= MEDIUM:\n\t\treturn 'mittel'\n\treturn 'schwach'\n\n\n# --- Revit ------------------------------------------------------------------\n\ndef id_value(element_id):\n\tvalue = getattr(element_id, 'Value', None)  # Revit 2024+\n\tif value is None:\n\t\tvalue = element_id.IntegerValue\n\treturn int(value)\n\n\ndef param_text(p):\n\tif p is None:\n\t\treturn ''\n\tif p.StorageType == StorageType.String:\n\t\treturn (p.AsString() or '').strip()\n\treturn ''\n\n\ndef bip_text(element, built_in):\n\treturn param_text(element.get_Parameter(built_in)) if element is not None else ''\n\n\ndef all_texts(element):\n\t\"\"\"Alle Text-Parameter eines Elements (ohne Planerparameter).\"\"\"\n\ttexts = []\n\tif element is None:\n\t\treturn texts\n\tfor p in element.Parameters:\n\t\tname = p.Definition.Name\n\t\tif name.startswith(PLANNER_PREFIX) or name.startswith('RDS_') or name == TARGET:\n\t\t\tcontinue\n\t\tvalue = param_text(p)\n\t\tif value and len(value) < 200:\n\t\t\ttexts.append(value)\n\treturn texts\n\n\ndef model_categories_with_elements(document):\n\tresult = []\n\tfor cat in document.Settings.Categories:\n\t\tif cat.CategoryType != CategoryType.Model:\n\t\t\tcontinue\n\t\tcount = FilteredElementCollector(document).OfCategoryId(cat.Id) \\\n\t\t\t.WhereElementIsNotElementType().GetElementCount()\n\t\tif count:\n\t\t\tresult.append((cat.Name, cat.Id, count))\n\tresult.sort(key=lambda c: c[0].lower())\n\treturn result\n\n\ndef ask_for_categories(categories):\n\tform = Form()\n\tform.Text = 'LV-Zuordnung v2 - ' + ('SCHREIBEN' if WRITE else 'Testlauf (nichts wird geschrieben)')\n\tform.StartPosition = FormStartPosition.CenterScreen\n\tform.Size = Size(480, 600)\n\tform.TopMost = True\n\tbox = CheckedListBox()\n\tbox.CheckOnClick = True\n\tbox.Dock = DockStyle.Fill\n\tfor name, _, count in categories:\n\t\tbox.Items.Add('{0}   ({1} Elemente)'.format(name, count))\n\tbuttons = Panel()\n\tbuttons.Dock = DockStyle.Bottom\n\tbuttons.Height = 50\n\tok = Button()\n\tok.Text = 'OK'\n\tok.DialogResult = DialogResult.OK\n\tok.Size = Size(100, 30)\n\tok.Location = Point(240, 10)\n\tcancel = Button()\n\tcancel.Text = 'Abbrechen'\n\tcancel.DialogResult = DialogResult.Cancel\n\tcancel.Size = Size(100, 30)\n\tcancel.Location = Point(350, 10)\n\tbuttons.Controls.Add(ok)\n\tbuttons.Controls.Add(cancel)\n\tlabel = Label()\n\tlabel.Text = 'Kategorien anhaken, deren Bauteile eine LV-Nummer bekommen sollen:'\n\tlabel.Dock = DockStyle.Top\n\tlabel.Height = 40\n\tform.Controls.Add(box)\n\tform.Controls.Add(buttons)\n\tform.Controls.Add(label)\n\tform.AcceptButton = ok\n\tform.CancelButton = cancel\n\tif form.ShowDialog() != DialogResult.OK:\n\t\treturn None\n\treturn [categories[int(i)] for i in box.CheckedIndices]\n\n\n# --- Ausgabe -------------------------------------------------------------------\n\ndef csv_field(value):\n\ttext = '' if value is None else str(value)\n\tif ';' in text or '\"' in text or '\\n' in text:\n\t\ttext = '\"' + text.replace('\"', '\"\"') + '\"'\n\treturn text\n\n\ndef write_csv(path, rows):\n\tlines = [';'.join(csv_field(v) for v in row) for row in rows]\n\twith io.open(path, 'w', encoding='utf-8-sig', newline='') as f:\n\t\tf.write(u'\\r\\n'.join(lines) + u'\\r\\n')\n\n\nCOPILOT_INTRO = u\"\"\"Du hilfst bei der Zuordnung von Revit-Bauteilen (Gebaeudeautomation) zu Positionen eines Leistungsverzeichnisses (LV).\nFuer jedes Bauteil unten stehen seine Angaben und bis zu {0} Kandidaten aus dem LV.\nWaehle je Bauteil die passende LV-Position oder schreibe \"keine\", wenn keine passt. Rate nicht.\nAntworte NUR als CSV mit Semikolon und dieser Kopfzeile:\nSchluessel;LV-Nummer;Begruendung\n\n\"\"\".format(MAX_SUGGESTIONS)\n\n\n# --- Hauptablauf -----------------------------------------------------------------\n\ndef run():\n\tif not SAP_PATH and not DB_PATH:\n\t\treturn 'FEHLER: Bitte SAP-LV (.xlsx) und/oder Datenbank-CSV angeben.'\n\tsap = read_sap(SAP_PATH) if SAP_PATH and os.path.isfile(SAP_PATH) else []\n\tdatabase, conflicts = read_database(DB_PATH) if DB_PATH and os.path.isfile(DB_PATH) else ({}, set())\n\tif not sap and not database:\n\t\treturn 'FEHLER: Weder SAP-LV noch Datenbank konnten gelesen werden.'\n\n\tselected = ask_for_categories(model_categories_with_elements(doc))\n\tif not selected:\n\t\treturn 'Abgebrochen bzw. keine Kategorie angehakt. Es wurde nichts veraendert.'\n\n\ttype_cache = {}\n\tcombos = {}\n\tresults = []      # je Bauteil\n\twrites = []       # (Ziel-Element, Wert, Bauteil-ID)\n\n\tfor cat_name, cat_id, _ in selected:\n\t\tfor el in FilteredElementCollector(doc).OfCategoryId(cat_id).WhereElementIsNotElementType():\n\t\t\ttid = el.GetTypeId()\n\t\t\ttkey = id_value(tid) if tid is not None else -1\n\t\t\tif tkey not in type_cache:\n\t\t\t\tt = doc.GetElement(tid) if tkey >= 0 else None\n\t\t\t\ttype_cache[tkey] = {\n\t\t\t\t\t'el': t,\n\t\t\t\t\t'familie': bip_text(t, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM),\n\t\t\t\t\t'typ': bip_text(t, BuiltInParameter.SYMBOL_NAME_PARAM),\n\t\t\t\t\t'modell': bip_text(t, BuiltInParameter.ALL_MODEL_MODEL),\n\t\t\t\t\t'texts': all_texts(t),\n\t\t\t\t}\n\t\t\tti = type_cache[tkey]\n\t\t\tfamilie, typ = ti['familie'], ti['typ']\n\t\t\tmodell = bip_text(el, BuiltInParameter.ALL_MODEL_MODEL) or ti['modell']\n\t\t\tkommentar = bip_text(el, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)\n\t\t\teid = id_value(el.Id)\n\n\t\t\t# Ziel: Exemplarparameter, sonst Typparameter\n\t\t\ttarget_el, p = el, el.LookupParameter(TARGET)\n\t\t\tif p is None and ti['el'] is not None:\n\t\t\t\ttarget_el, p = ti['el'], ti['el'].LookupParameter(TARGET)\n\t\t\trow = [eid, cat_name, familie, typ, modell, kommentar]\n\t\t\tif p is None or p.StorageType != StorageType.String:\n\t\t\t\tresults.append(row + ['', 'Fehler', \"Zielparameter '\" + TARGET + \"' fehlt oder ist kein Text\", ''])\n\t\t\t\tcontinue\n\t\t\tif (p.AsString() or '').strip():\n\t\t\t\tresults.append(row + [p.AsString(), 'vorhanden', 'nicht ueberschrieben', ''])\n\t\t\t\tcontinue\n\n\t\t\t# Stufe 1: Datenbank (Modell, dann Typname)\n\t\t\tlv = None\n\t\t\tfor k in model_keys(modell) + [nospace(typ)]:\n\t\t\t\tif k and k in database:\n\t\t\t\t\tif k in conflicts:\n\t\t\t\t\t\tlv = 'KONFLIKT'\n\t\t\t\t\telse:\n\t\t\t\t\t\tlv = database[k]\n\t\t\t\t\tbreak\n\t\t\tif lv and lv != 'KONFLIKT':\n\t\t\t\tresults.append(row + [lv, 'sicher', 'Datenbank', ''])\n\t\t\t\twrites.append((target_el, lv, eid, p))\n\t\t\t\tcontinue\n\n\t\t\t# Stufen 2-3: SAP-LV exakt\n\t\t\tstage, hits = exact_matches(sap, modell, typ, familie) if sap else ('', [])\n\t\t\tpositions = sorted(set(h['pos'] for h in hits))\n\t\t\tif len(positions) == 1:\n\t\t\t\tresults.append(row + [positions[0], 'sicher', stage, ''])\n\t\t\t\twrites.append((target_el, positions[0], eid, p))\n\t\t\t\tcontinue\n\n\t\t\t# Vorschlagsliste je Kombination\n\t\t\tckey = (cat_name, familie, typ, modell, kommentar)\n\t\t\tif ckey not in combos:\n\t\t\t\ttexts = [modell, typ, familie, kommentar] + ti['texts'] + all_texts(el)\n\t\t\t\tproduct_text = ' '.join(x for x in (modell, typ, bip_text(ti['el'], BuiltInParameter.ALL_MODEL_DESCRIPTION)) if x)\n\t\t\t\tif lv == 'KONFLIKT':\n\t\t\t\t\treason, cands = 'Datenbank enthaelt widerspruechliche LV-Nummern', []\n\t\t\t\telif len(positions) > 1:\n\t\t\t\t\treason = 'mehrdeutig: Produkt steht in mehreren LV-Positionen'\n\t\t\t\t\tcands = [(1.0, h) for h in hits][:MAX_SUGGESTIONS * 3]\n\t\t\t\telif sap:\n\t\t\t\t\treason = 'kein exakter Treffer: Aehnlichkeitssuche'\n\t\t\t\t\tcands = suggest(sap, tokens(' '.join(texts)), product_text)\n\t\t\t\telse:\n\t\t\t\t\treason, cands = 'kein Treffer in der Datenbank', []\n\t\t\t\tcombos[ckey] = {'n': 0, 'reason': reason, 'cands': cands, 'texts': texts}\n\t\t\tcombos[ckey]['n'] += 1\n\t\t\tbest = combos[ckey]['cands'][0] if combos[ckey]['cands'] else None\n\t\t\tresults.append(row + ['', 'Vorschlag' if best else 'offen', combos[ckey]['reason'],\n\t\t\t\t(best[1]['pos'] + ' (' + str(best[0]) + ')') if best else ''])\n\n\t# Schreiben: nur sichere Treffer, Typparameter nur bei einheitlichem Wert\n\twritten = 0\n\twrite_errors = []\n\tif WRITE and writes:\n\t\tby_target = {}\n\t\tfor target_el, value, eid, p in writes:\n\t\t\tkey = id_value(target_el.Id)\n\t\t\tby_target.setdefault(key, {'p': p, 'values': set(), 'ids': []})\n\t\t\tby_target[key]['values'].add(value)\n\t\t\tby_target[key]['ids'].append(eid)\n\t\tTransactionManager.Instance.EnsureInTransaction(doc)\n\t\ttry:\n\t\t\tfor key, info in by_target.items():\n\t\t\t\tif len(info['values']) > 1:\n\t\t\t\t\twrite_errors.append([key, 'Typparameter, aber unterschiedliche LV-Nummern: ' + ', '.join(sorted(info['values']))])\n\t\t\t\t\tcontinue\n\t\t\t\ttry:\n\t\t\t\t\tif info['p'].IsReadOnly:\n\t\t\t\t\t\traise Exception('schreibgeschuetzt')\n\t\t\t\t\tinfo['p'].Set(list(info['values'])[0])\n\t\t\t\t\twritten += len(info['ids'])\n\t\t\t\texcept Exception as ex:\n\t\t\t\t\twrite_errors.append([key, 'Schreiben fehlgeschlagen (belegt oder gesperrt?): ' + str(ex)])\n\t\tfinally:\n\t\t\tTransactionManager.Instance.TransactionTaskDone()\n\n\t# Dateien\n\tfolder = os.path.join(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop),\n\t\t'LV_Zuordnung_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))\n\tos.makedirs(folder)\n\twrite_csv(os.path.join(folder, '1_Ergebnis_je_Bauteil.csv'),\n\t\t[['Element-ID', 'Kategorie', 'Familie', 'Typ', 'Modell', 'Kommentar', 'LV-Nummer', 'Status', 'Quelle / Grund',\n\t\t'bester Vorschlag (Punktzahl)']] + results)\n\n\theader = ['Schluessel', 'LV-Nummer (hier bestaetigen)', 'Anzahl Bauteile', 'Grund']\n\tfor i in range(1, MAX_SUGGESTIONS + 1):\n\t\theader += ['Vorschlag ' + str(i), 'Punktzahl ' + str(i), 'Bewertung ' + str(i), 'LV-Kurztext ' + str(i)]\n\theader += ['Kategorie', 'Familie', 'Typ', 'Modell', 'Kommentar']\n\trows = [header]\n\tprompt = [COPILOT_INTRO]\n\tfor ckey in sorted(combos, key=lambda k: -combos[k]['n']):\n\t\tc = combos[ckey]\n\t\tkey = ckey[3] or ckey[2]  # Schluessel fuer die Datenbank: Modell, sonst Typname\n\t\tline = [key, '', c['n'], c['reason']]\n\t\tfor i in range(MAX_SUGGESTIONS):\n\t\t\tif i < len(c['cands']):\n\t\t\t\tscore, pos = c['cands'][i]\n\t\t\t\tline += [pos['pos'], score, rating(score) if 'mehrdeutig' not in c['reason'] else 'mehrdeutig', pos['text']]\n\t\t\telse:\n\t\t\t\tline += ['', '', '', '']\n\t\trows.append(line + list(ckey))\n\t\tprompt.append(u'Schluessel: {0}\\nBauteil: Kategorie={1}; Familie={2}; Typ={3}; Modell={4}; Kommentar={5}'.format(\n\t\t\tkey, ckey[0], ckey[1], ckey[2], ckey[3], ckey[4]))\n\t\tprompt.append(u'Weitere Angaben: ' + '; '.join(sorted(set(t for t in c['texts'] if t)))[:400])\n\t\tfor score, pos in c['cands']:\n\t\t\tprompt.append(u'  Kandidat {0} | Leistungsnummer {1} | {2} | Einheit {3}'.format(pos['pos'], pos['nr'], pos['text'], pos['einheit']))\n\t\tprompt.append(u'')\n\twrite_csv(os.path.join(folder, '2_Vorschlaege.csv'), rows)\n\twith io.open(os.path.join(folder, '3_Copilot_Anfrage.txt'), 'w', encoding='utf-8-sig') as f:\n\t\tf.write(u'\\r\\n'.join(prompt))\n\tif write_errors:\n\t\twrite_csv(os.path.join(folder, '4_Schreibfehler.csv'), [['Ziel-Element-ID', 'Problem']] + write_errors)\n\n\tstatus = {}\n\tfor r in results:\n\t\tstatus[r[7]] = status.get(r[7], 0) + 1\n\treturn '\\n'.join(line for line in [\n\t\t'FERTIG - ' + ('es wurde GESCHRIEBEN' if WRITE else 'TESTLAUF: es wurde nichts geschrieben'),\n\t\t'Kategorien: ' + ', '.join(c[0] for c in selected),\n\t\t'SAP-LV: {0} Positionen; Datenbank: {1} Eintraege'.format(len(sap), len(database)),\n\t\t'Bauteile: {0}'.format(len(results)),\n\t\t'  sicher zugeordnet: {0}'.format(status.get('sicher', 0)),\n\t\t'  schon vorhanden (nicht ueberschrieben): {0}'.format(status.get('vorhanden', 0)),\n\t\t'  Vorschlag zur Pruefung: {0}'.format(status.get('Vorschlag', 0)),\n\t\t'  offen ohne Vorschlag: {0}'.format(status.get('offen', 0)),\n\t\t'  Fehler (Zielparameter fehlt): {0}'.format(status.get('Fehler', 0)),\n\t\t'Kombinationen in der Vorschlagsliste: {0}'.format(len(combos)),\n\t\t('Geschrieben: {0} Bauteile; Schreibfehler: {1}'.format(written, len(write_errors)) if WRITE else ''),\n\t\t'Ergebnisordner: ' + folder,\n\t] if line)\n\n\nOUT = run()\n",
+      "Engine": "CPython3",
+      "EngineName": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "543f3c78d934422ea6d5e40f6288c856",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "b8d787bd558144eb8689908e78a1eaeb",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "f852cfc086b7411c9338d37425eb431c",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "a6c1704c65c549bb9e1d0cb61b072f03",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "6f2a9c8914934b19a80eadb8b0ad393f",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "d7019dadd90e4aa1a48e50ce45680df5",
+          "Name": "OUT",
+          "Description": "Ergebnis des Python-Skripts",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Führt ein eingebettetes Python-Skript aus."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 560.0,
+      "WatchHeight": 260.0,
+      "Id": "884ac503008242d38a80c44850136bac",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "74374ff777b64fc4b6897548446a2559",
+          "Name": "",
+          "Description": "Knoten, der ausgewertet werden soll.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "6aeb74ea049242b7bd28efd08d199147",
+          "Name": "",
+          "Description": "Knotenauswertung überwachen",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualisiert die Eingabe des Blocks als Ausgabe des Blocks"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "dd11d7b45f554be59931acac4163597c",
+      "End": "b8d787bd558144eb8689908e78a1eaeb",
+      "Id": "d1d09c0d5a1d435bbb17bc65d6ee27ee",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "d261bfb431f84a89988d1381a9e8cead",
+      "End": "f852cfc086b7411c9338d37425eb431c",
+      "Id": "bfcf482cd3fe4f8282fe020ec4804dd9",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "915922f644134ce6b45ce6fb2bc82471",
+      "End": "a6c1704c65c549bb9e1d0cb61b072f03",
+      "Id": "02cc40b88e8d4dae9cb7311cacae2138",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "4456f2525bfa4d1aad5f38e8ce046f3f",
+      "End": "6f2a9c8914934b19a80eadb8b0ad393f",
+      "Id": "50023b462ac8451e8d9620774b0d5903",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "d7019dadd90e4aa1a48e50ce45680df5",
+      "End": "74374ff777b64fc4b6897548446a2559",
+      "Id": "8fc311115c4c4177b637481ffc4ff5d9",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "Keine",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 0.01,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "3.6.1.9895",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Hintergrundvorschau",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "a80c34564cf14988a51f12b569cad8f7",
+        "Name": "1 SAP-LV (.xlsx)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 0.0
+      },
+      {
+        "Id": "69e46f155e14411abcd6067b26ce792f",
+        "Name": "2 Datenbank-CSV",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 170.0
+      },
+      {
+        "Id": "ff51f1ebcb5c4df6a9f0a27806061134",
+        "Name": "3 Zielparameter",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 340.0
+      },
+      {
+        "Id": "1980856ddb464c11ac7b80c4f0f9f175",
+        "Name": "4 In Modell schreiben",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0.0,
+        "Y": 510.0
+      },
+      {
+        "Id": "543f3c78d934422ea6d5e40f6288c856",
+        "Name": "LV-Zuordnung v2",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 450.0,
+        "Y": 220.0
+      },
+      {
+        "Id": "884ac503008242d38a80c44850136bac",
+        "Name": "Ergebnis",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": true,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 750.0,
+        "Y": 200.0
+      }
+    ],
+    "Annotations": [],
+    "X": 100.0,
+    "Y": 60.0,
+    "Zoom": 0.8
+  }
+}
