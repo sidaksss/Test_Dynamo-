@@ -14,6 +14,8 @@ GA_Diagnose_<Zeitstempel> auf den Desktop (CSV, UTF-8 mit BOM, Trennzeichen ;):
   5c_Mengen_je_Leistungsnummer.csv  e) Soll (LV) gegen Ist (Modell), grob
   6_Verknuepfungen.csv         f) RVT-Verknuepfungen und ihre Elemente
   7_Filter.csv                 g) Ansichtsfilter: welcher Parameter blendet aus?
+  8_Werte.csv                  h) Werteverteilung wichtiger Parameter (inkl. Arbeitssatz)
+  9_Verschachtelung.csv        i) verschachtelte Bauteile mit ihrem uebergeordneten Bauteil
 
 Inputs:  IN[0] Datenbank-CSV (Modell;LV-Nummer), optional
          IN[1] LV-Datei aus SAP (.xlsx oder .csv), optional
@@ -64,6 +66,12 @@ ZWP_FILTER = 'ZWP_400_Auswahlfilter'
 RDS_NAMES = ['RDS_Code', 'RDS_Projekt', 'RDS_Bauabschnitt', 'RDS_Modul', 'RDS_Teilmodul',
 	'RDS_Gebaeude', 'RDS_Geschoss', 'RDS_Segment', 'RDS_Raum', 'RDS_System',
 	'RDS_Systemkennzeichnung', 'RDS_SystemNum', 'RDS_Funktion', 'RDS_FunktionsNum']
+
+# Parameter, deren Werte in 8_Werte.csv gezaehlt werden (plus Arbeitssatz).
+VALUE_PARAMS = ['ZWP_400_LV_Aufteilung', 'ZWP_400_Kostengruppe', 'ZWP_400_Gewerk', 'Gewerk',
+	'Kostengruppe', 'DIN 276', 'ZWP_450_Ausführungsart', 'ZWP_400_Listenfilter', 'ZWP_400_Freigegeben',
+	'ZWP_400_LP8_Abrechnung', 'RDS_System']
+MAX_VALUES = 60
 
 # ANNAHME: Parameternamen, die nach einer Kostengruppe aussehen.
 KG_PARAM_PATTERN = re.compile(r'kostengruppe|din.?276|(^|[_ ])kg($|[_ ])', re.IGNORECASE)
@@ -544,6 +552,9 @@ def run():
 	type_params_done = set()
 	model_names = {}
 	own_lv_values = Counter()
+	value_stats = {}
+	nested_pairs = {}
+	host_types = {}
 	lv_matched_by_key = Counter()
 	total = sum(c[2] for c in selected)
 	done = 0
@@ -655,12 +666,14 @@ def run():
 				cs['lp8_not_siem'] += 1
 			if zwp_lv and own_lv:
 				cs['zwp_eq_own' if nospace(zwp_lv) == nospace(own_lv) else 'zwp_ne_own'] += 1
+			ws_name = ''
 			if workshared:
 				try:
 					wid = id_value(el.WorksetId)
 					if wid not in workset_names:
 						workset_names[wid] = doc.GetWorksetTable().GetWorkset(el.WorksetId).Name
-					cs['worksets'].add(workset_names[wid])
+					ws_name = workset_names[wid]
+					cs['worksets'].add(ws_name)
 					if WorksharingUtils.GetCheckoutStatus(doc, el.Id) == CheckoutStatus.OwnedByOtherUser:
 						cs['owned_other'] += 1
 				except Exception:
@@ -696,6 +709,40 @@ def run():
 				m['n'] += 1
 				m['types'].add(tkey)
 				m['cats'].add(cat_name)
+
+			# h) Werteverteilung
+			code_ok = bool(SIEMENS_CODE.match(collapse(modell)))
+			sys48 = rds['RDS_System'].strip().startswith('48')
+			for pname in ['Arbeitssatz'] + VALUE_PARAMS + EXTRA_PARAMS:
+				if pname == 'Arbeitssatz':
+					val = ws_name or '(kein Worksharing)'
+				elif pname == 'RDS_System':
+					val = rds['RDS_System']
+				else:
+					val = value_of(el, t, pname)
+				vs = value_stats.setdefault((pname, cat_name, val or '(leer)'), [0, 0, 0, 0])
+				vs[0] += 1
+				vs[1] += 1 if code_ok else 0
+				vs[2] += 1 if sys48 else 0
+				vs[3] += 1 if host is not None else 0
+
+			# i) Verschachtelung
+			if host is not None:
+				try:
+					htid = host.GetTypeId()
+					hkey = id_value(htid)
+					if hkey not in host_types:
+						ht = doc.GetElement(htid) if hkey >= 0 else None
+						host_types[hkey] = (
+							param_text(by_builtin(ht, BuiltInParameter.SYMBOL_FAMILY_NAME_PARAM)),
+							param_text(by_builtin(ht, BuiltInParameter.SYMBOL_NAME_PARAM)),
+							value_of(None, ht, 'Modell', BuiltInParameter.ALL_MODEL_MODEL))
+					hfam, htyp, hmod = host_types[hkey]
+					hmod = value_of(host, None, 'Modell', BuiltInParameter.ALL_MODEL_MODEL) or hmod
+				except Exception:
+					hfam, htyp, hmod = '?', '?', ''
+				npk = (cat_name, familie, typ, modell, hfam, htyp, hmod)
+				nested_pairs[npk] = nested_pairs.get(npk, 0) + 1
 
 	progress.show('Schreibe Dateien ...')
 
@@ -834,6 +881,32 @@ def run():
 		write_csv(os.path.join(folder, '5c_Mengen_je_Leistungsnummer.csv'), rows)
 		lv_summary = 'LV: {0} Zeilen; Positionen ohne Bauteile: {1}; Bauteile ohne LV: {2}'.format(len(lv), ohne, ohne_bt)
 
+	# 8) Werteverteilung
+	rows = [['Parameter', 'Kategorie', 'Wert', 'Elemente', 'davon Modell mit Siemens-Code',
+		'davon RDS_System 48x', 'davon verschachtelt']]
+	for pname in ['Arbeitssatz'] + VALUE_PARAMS + EXTRA_PARAMS:
+		for cat_name, _, _ in selected:
+			entries = sorted(((k[2], v) for k, v in value_stats.items() if k[0] == pname and k[1] == cat_name),
+				key=lambda kv: -kv[1][0])
+			for val, v in entries[:MAX_VALUES]:
+				rows.append([pname, cat_name, val, v[0], v[1], v[2], v[3]])
+			if len(entries) > MAX_VALUES:
+				rest = entries[MAX_VALUES:]
+				rows.append([pname, cat_name, '(weitere {0} Werte)'.format(len(rest)),
+					sum(v[0] for _, v in rest), sum(v[1] for _, v in rest), sum(v[2] for _, v in rest),
+					sum(v[3] for _, v in rest)])
+	write_csv(os.path.join(folder, '8_Werte.csv'), rows)
+
+	# 9) Verschachtelung
+	rows = [['Kategorie', 'Familie (verschachtelt)', 'Typ (verschachtelt)', 'Modell (verschachtelt)',
+		'Familie (uebergeordnet)', 'Typ (uebergeordnet)', 'Modell (uebergeordnet)', 'Anzahl',
+		'gleiches Produkt wie uebergeordnet', 'Modell (verschachtelt) im LV']]
+	for npk in sorted(nested_pairs, key=lambda k: -nested_pairs[k]):
+		same = bool(npk[3]) and collapse(npk[3]).split(' ')[0] == collapse(npk[6]).split(' ')[0]
+		in_lv_nested = (lookup(lv_keys, npk[3]) or 'nein') if lv is not None and npk[3] else ''
+		rows.append(list(npk) + [nested_pairs[npk], 'ja' if same else ('Modell leer' if not npk[3] else 'nein'), in_lv_nested])
+	write_csv(os.path.join(folder, '9_Verschachtelung.csv'), rows)
+
 	# 6) Verknuepfungen
 	progress.show('Pruefe Verknuepfungen ...')
 	try:
@@ -869,6 +942,8 @@ def run():
 		lv_summary,
 		'Verknuepfungen: {0} (geladen: {1})'.format(n_links, n_links_loaded),
 		'Ansichtsfilter: {0}'.format(len(filters)),
+		'Verschachtelte Bauteile: {0} in {1} Kombinationen (siehe 9_Verschachtelung.csv)'.format(
+			sum(nested_pairs.values()), len(nested_pairs)),
 		'Worksharing: ' + ('ja' if workshared else 'nein'),
 		'Ergebnisordner: ' + folder,
 	]

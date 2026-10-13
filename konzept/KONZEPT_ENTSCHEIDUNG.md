@@ -9,6 +9,7 @@
 > - der SAP-Beispielexport
 > - deine Antworten auf die 10 Fragen
 > - deine Screenshots aus dem Revit-Modell (Eigenschaften, Typeneigenschaften)
+> - `konzept/DIAGNOSE_AUSWERTUNG_2.md` (17.835 Elemente, 8 Kategorien)
 >
 > **Kennzeichnung im Text:**
 > - **[Befund]**: aus echten Daten belegt.
@@ -73,8 +74,12 @@
 | W11 | Eine Fachperson kann ~50 Fälle von Hand prüfen, aber nicht 500. | deine Antwort 10 |
 | W12 | Der Fühler `WK_238` liegt im **Arbeitssatz** (Revit: „Bearbeitungsbereich“) `480_Gebäudeautomation`. Die Planer trennen GA-Bauteile offenbar über Arbeitssätze. | Screenshot [Befund für dieses Bauteil] |
 | W13 | `ZWP_400_Kostengruppe` existiert als **Typ**parameter, ist beim Typ `QAM2112.040` aber **leer**. | Screenshot [Befund] |
-| W14 | `ZWP_400_Freigegeben` ist ein Häkchen am **Exemplar** (hier gesetzt). Es kommt als Parameter für die Ausblend-Filter in Frage. | Screenshot [Befund]; Filterbezug [Annahme] |
+| W14 | `ZWP_400_Freigegeben` ist ein Ja/Nein-Parameter am **Exemplar**, nur bei HLS-Bauteilen, und **nirgends gesetzt**. Das graue Häkchen im Screenshot bedeutet „kein Wert“. Damit scheidet er als Filterparameter vermutlich aus. | Diagnose 2 [Befund] |
 | W15 | Siemens arbeitet offenbar im **Planermodell**: Der Dateiname enthält „ZWP-5-ELT“, und der aktive Arbeitssatz „400_Koordination“ ist „nicht bearbeitbar“. | Screenshot [Annahme] |
+| W17 | `ZWP_400_LP8_Abrechnung`, `ZWP_400_LV_Position` und `ZWP_400_LV_Text` sind in allen 17.835 Elementen leer. | Diagnose 2 [Befund] |
+| W18 | Rund 2.000 Elemente liegen im Arbeitssatz `480_Gebäudeautomation` (≈ 11 %). Der Arbeitssatz trennt die Gewerke besser als das RDS-System. | Diagnose 2 [Befund/Annahme] |
+| W19 | 32 % der Elemente sind verschachtelt, in drei Arten: eigenes Produkt (z. B. Meldersockel), Doppelung des Hauptprodukts (z. B. 215 × `QMX3.P30` in allen QMX3-Geräten), Symbol. | Diagnose 2 [Befund] |
+| W20 | `SI_`-Familien sind die Siemens-**Bibliothek**, nicht nur Siemens-Produkte (z. B. Kameras anderer Hersteller). Siemens-Produkte gehören nicht automatisch zur GA (z. B. Brandmelder im Arbeitssatz 450). | Diagnose 2 [Befund] |
 | W16 | Am Typ stehen produktbezogene Angaben: Modell, Hersteller, Beschreibung („Luftkanaltemperaturfühler 400 mm, Pt1000“), Gewerk `COM`, Klassifizierungsnummer `23.85.80.11.21`. Am Exemplar stehen gerätebezogene Angaben: RDS, Kennzeichen, Kommentar, Datenpunktbeschreibung, Controller, Freigabe. | Screenshot [Befund] |
 
 ### 2.1 Warum liegen die RDS-Angaben am Exemplar?
@@ -132,12 +137,12 @@ Die Entscheidung triffst **du**. Die Diagnose liefert dafür die Kriterien (Date
 
 | Kriterium | Spalte in `1_Kategorien.csv` | Bedeutung |
 |---|---|---|
-| U1 Siemens-typisch | „Hersteller Siemens / SI_-Familie / Siemens-Code“ | Anteil der Bauteile mit Hersteller Siemens, `SI_`-Familie oder Siemens-typischer Produktbezeichnung **[Annahme: Erkennungsmuster]** |
+| U1 Siemens-typisch | „Hersteller Siemens / SI_-Familie / Siemens-Code“, getrennt nach „davon SI_-Familie“ und „Modell mit Siemens-Code“ | **Nur Hinweis, kein Umfangskriterium** (W20): `SI_` = Siemens-Bibliothek, Siemens-Code = Siemens-Produkt, auch außerhalb der GA **[Annahme: Erkennungsmuster]** |
 | U2 GA-typische Funktion | „RDS-Funktion GA-typisch“ | Anteil mit RDS-Kennbuchstaben B, K, M, P, Q, S (messen, regeln, antreiben, anzeigen, stellen, bedienen) **[Annahme]** |
 | U3 Im LV vorhanden | „Modell im LV“ | Anteil, dessen Modell als Leistungsnummer im SAP-LV steht. **Das stärkste Kriterium**, denn das LV ist verbindlich. |
 | U4 Kostengruppe | „KG im Familien-/Typnamen“ und „Kostengruppen-Parameter“ | z. B. `ZWP_480_…` → KG 480 (Gebäudeautomation) **[Annahme]** |
 | U5 Planer-Kennzeichen | „ZWP_400_LP8_Abrechnung angehakt“ | nur verwendbar, wenn gepflegt (Regel R6) |
-| U6 Arbeitssatz | „Arbeitssaetze“ | z. B. `480_Gebäudeautomation` (W12). Möglicherweise das klarste Kriterium, wenn die Planer GA-Bauteile konsequent in diesen Arbeitssatz legen. **[Annahme, mit der Diagnose prüfen]** |
+| U6 Arbeitssatz | „Arbeitssaetze“ und `8_Werte.csv` | `480_Gebäudeautomation` (W12, W18). Nach Diagnose 2 das **stärkste Kriterium aus dem Modell**; zusammen mit `ZWP_400_LV_Aufteilung` und `ZWP_400_Kostengruppe` prüfen. **[Annahme, vom Planer bestätigen lassen]** |
 
 **Vorschlag für eine Regel**, über die du entscheidest:
 - Ein Bauteil gehört zum Umfang, wenn es über die Kaskade einer LV-Position zugeordnet werden kann (U3 bzw. Typ-Tabelle).
@@ -149,7 +154,7 @@ Die Entscheidung triffst **du**. Die Diagnose liefert dafür die Kriterien (Date
 | Stufe | Prüfung | Vertrauen | Ergebnis |
 |---|---|---|---|
 | 0 | Hat das Bauteil schon eine eigene LV-Position? | – | behalten (nicht überschreiben), nur gegenprüfen |
-| 0b | Ist das Bauteil verschachtelt (Unterfamilie) oder entfallen (Kapitel 6.4)? | – | **nicht zählen** |
+| 0b | Ist das Bauteil entfallen oder eine verschachtelte Unterfamilie, die **kein eigenes LV-Produkt** ist (Kapitel 6.4)? | – | **nicht zählen** |
 | 1 | „Modell“ (normalisiert: Großschreibung, ohne Leerzeichen, erstes Wort) = SAP-`Leistungsnummer`, `L-Identifizierer` oder `Materialnummer` | HOCH | Produkt bestimmt |
 | 2 | Typname bzw. Familienname enthält eine Leistungsnummer aus dem LV (z. B. `…_Kanaltemperaturfühler_QAM2112` → `QAM2112…`) | HOCH | Produkt bestimmt |
 | 3 | **Typ-Tabelle** (einmal gepflegt): Familie \| Typ → Leistungsnummer, Mengenart, Mengenfaktor | HOCH, wenn geprüft | Produkt bestimmt |
@@ -279,8 +284,13 @@ Verglichen werden **nur diese beiden Dateien**. Nach der Freigabe des Nachtrags 
 Der Vergleich darf **nie** fragen, ob ein Bauteil sichtbar ist, sondern nur nach einem **Parameterwert**. Ein Bauteil zählt **nicht** mit, wenn mindestens eins davon zutrifft:
 
 1. Es ist im neuen Modellstand nicht mehr vorhanden (gelöscht).
-2. Es ist **verschachtelt** (Unterfamilie). Solche Bauteile werden nie gezählt.
-3. Der Parameter, nach dem die Ausblend-Filter des Planers arbeiten, hat den Wert für „entfallen“. **Kandidat [Annahme]:** das Häkchen `ZWP_400_Freigegeben` am Exemplar (W14).
+2. Es ist **verschachtelt** (Unterfamilie) und **kein eigenes LV-Produkt**. Diagnose 2 zeigt drei Arten (W19):
+   - eigenes Produkt (z. B. Meldersockel `FDB221`): zählt, wenn es als Leistungsnummer im LV steht;
+   - Doppelung des Hauptprodukts (z. B. `QMX3.P30` in allen QMX3-Geräten): zählt nie;
+   - Symbol ohne Produkt (z. B. „physischer Datenpunkt“): zählt nie.
+
+   Die Entscheidung fällt einmal je Unterfamilien-Typ über den Mengenfaktor in T2. Grundlage ist `9_Verschachtelung.csv`.
+3. Der Parameter, nach dem die Ausblend-Filter des Planers arbeiten, hat den Wert für „entfallen“. Welcher das ist, zeigt `7_Filter.csv`. `ZWP_400_Freigegeben` ist es vermutlich nicht, denn er ist nirgends gesetzt (W14).
 4. Die Revit-Phase „Abgebrochen“ ist gesetzt (die Diagnose zählt das mit).
 
 **So findest du heraus, nach welchem Parameter die Filter arbeiten:**
@@ -363,7 +373,7 @@ Mit dem SAP-Einheitspreis lässt sich der Betrag je Zeile dazurechnen.
 | nur exakter Modell-Vergleich | Kaskade 5.2 inkl. Normalisierung (erstes Wort, ohne Leerzeichen) |
 | Fehlerliste je Bauteil | Fehler- und Prüfliste **je Kombination** |
 | bricht bei belegten Bauteilen ab | meldet „belegt von …“, schreibt den Rest |
-| zählt Unterfamilien mit | überspringt verschachtelte Bauteile |
+| zählt Unterfamilien mit | zählt verschachtelte Bauteile nur, wenn sie ein eigenes LV-Produkt sind (6.4, T2) |
 | – | Testwerte `…test` aus Diagnose 1 vorher entfernen |
 
 **An Modul 2 (`dynamo/python/`):**
@@ -374,7 +384,7 @@ Mit dem SAP-Einheitspreis lässt sich der Betrag je Zeile dazurechnen.
 | JSON-Snapshot nur mit zugeordneten Elementen | Momentaufnahme (CSV) aller Bauteile im Umfang nach 6.2 |
 | zählt Elemente | zählt Grundmenge × Mengenfaktor in LV-Einheit (6.5) |
 | kennt kein „entfallen“ | entfallen nach Filterparameter / Abbruchphase (6.4) |
-| zählt Unterfamilien mit | schließt verschachtelte Bauteile aus |
+| zählt Unterfamilien mit | zählt verschachtelte Bauteile nur nach Mengenfaktor aus T2 (6.4) |
 | nur offenes Modell | auch Bauteile aus Verknüpfungen (6.7) |
 | `IntegerValue` | sicherer Weg über `Value` (Revit 2026) |
 | schreibt Nachtragsstatus in Bauteile | Vergleich rein lesend; Schreiben optional (6.8) |
@@ -440,7 +450,7 @@ Alle Schwellen sind **[Annahmen]** und sollten nach dem nächsten Diagnoselauf g
 | **R3** KI-Vorschlag lohnt | > 100 offene Typ-Kombinationen nach Stufe 1–2 | Variante a) nutzen; darunter von Hand |
 | **R4** RDS als Schlüssel zulässig | in `2_Kombinationen.csv` gehört jeder RDS-Schlüssel (System \| Funktion) bei ≥ 95 % der Elemente zu genau einem Produkt | Diagnose 1: **70 % → nicht erfüllt**, RDS nur zur Plausibilitätsprüfung |
 | **R5** T3 nötig | `5a_LV_Positionen.csv` enthält „Position mehrdeutig“ | Abschnitts-Entscheidungen einmalig sammeln |
-| **R6** `ZWP_400_LP8_Abrechnung` als Umfangsfilter geeignet | angehakt bei ≥ 90 % der Bauteile, die über das LV im Umfang sind, **und** bei ≤ 5 % der Bauteile außerhalb (Spalten „Siemens-typisch UND/OHNE LP8“, „LP8 OHNE Siemens-typisch“) | Diagnose 1: **0 % angehakt → derzeit ungeeignet**; höchstens später als zusätzlicher Hinweis |
+| **R6** `ZWP_400_LP8_Abrechnung` als Umfangsfilter geeignet | angehakt bei ≥ 90 % der Bauteile, die über das LV im Umfang sind, **und** bei ≤ 5 % der Bauteile außerhalb (Spalten „Siemens-typisch UND/OHNE LP8“, „LP8 OHNE Siemens-typisch“) | Diagnose 1 und 2: **0 angehakt (0 von 17.830) → ungeeignet**; höchstens später als zusätzlicher Hinweis |
 | **R7** Link-Weg nötig | `6_Verknuepfungen.csv` zeigt Siemens-typische Bauteile in Links | Zuordnung nur in der Momentaufnahme (6.7) |
 | **R8** Kategorie in den Umfang aufnehmen | U3 > 0 oder U1 ≥ 20 % oder U2 ≥ 50 % (Kapitel 5.1) | Kandidat; **du entscheidest** |
 
@@ -522,9 +532,9 @@ K7 und K9 belegen deine Kernforderung **„Pflege nur einmal“** mit Zahlen.
 
 | Nr. | Frage | Stand |
 |---|---|---|
-| F1 | Nach welchem Parameter arbeiten eure Ausblend-Filter? | **wird durch die neue Diagnose beantwortet** (`7_Filter.csv`). Kandidat: `ZWP_400_Freigegeben` (W14). Danach bitte bestätigen. |
+| F1 | Nach welchem Parameter arbeiten eure Ausblend-Filter? | **wird durch `7_Filter.csv` beantwortet** (Datei steht noch aus). `ZWP_400_Freigegeben` scheidet vermutlich aus (W14). |
 | F2 | Arbeitet Siemens in LP 8 im Planermodell oder in einem eigenen Modell mit Links? | Screenshot deutet auf das **Planermodell** (W15); bitte bestätigen. Wichtig für 6.7 und 6.8. |
-| F3 | Gibt es einen Kostengruppen-Parameter? | **Ja:** `ZWP_400_Kostengruppe` (Typparameter), beim gezeigten Typ aber leer (W13). Wie oft er gefüllt ist, zeigt die Diagnose (`3_Parameter.csv`). Die KG steht außerdem bei Generikfamilien im Namen (`ZWP_480_…`). |
+| F3 | Gibt es einen Kostengruppen-Parameter? | **Beantwortet: ja, drei.** `ZWP_400_Kostengruppe` (Typ, 43 % mit Wert), `Kostengruppe` (Typ, 318 Elemente), `DIN 276` (Exemplar, leer). Die Werte zeigt `8_Werte.csv`. |
 | F4 | Wer pflegt `ZWP_400_LP8_Abrechnung`, und wie verlässlich? | Diagnose 1: nirgends gesetzt. Wer es pflegen soll, kann nur der Planer bzw. die Projektleitung beantworten. |
 | F5 | Gehört zu einem RDS-Schlüssel immer genau eine LV-Position? | **beantwortet: Nein** (Kapitel 3, mit Daten belegt) |
 | F6 | Darf Siemens im Planermodell eigene Parameter anlegen und beschreiben, und auf welchem Arbeitssatz? | offen |
@@ -533,3 +543,5 @@ K7 und K9 belegen deine Kernforderung **„Pflege nur einmal“** mit Zahlen.
 | F9 | Kannst du den SAP-LV-Export **dieses Projekts** für den Diagnoselauf verwenden? | Er bleibt auf deinem Rechner; ins öffentliche Repository kommt er nicht. |
 | F10 | Liegen **alle** Siemens-Bauteile im Arbeitssatz `480_Gebäudeautomation`, und liegen dort **nur** Siemens-Bauteile? | Diagnose zeigt die Arbeitssätze je Kategorie; die Regel kann nur der Planer bestätigen (U6). |
 | F11 | Welche zwei Modellstände (z. B. V29 und V30) können für den ersten Versionsvergleich genutzt werden? | nötig für Stufe 4 |
+| F12 | Gehören Brandmeldeanlage und Sicherheitstechnik in diesem Projekt zum Siemens-LV oder nur die GA? | offen (W20) |
+| F13 | Was bedeutet `ZWP_400_LV_Aufteilung` (Wert bei 10.042 Elementen)? | Werte zeigt `8_Werte.csv`; Bedeutung kennt der Planer |

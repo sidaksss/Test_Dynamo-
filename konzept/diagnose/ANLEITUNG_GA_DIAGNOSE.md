@@ -68,7 +68,7 @@ Jeder Schritt enthält genau eine Handlung.
 ## Teil F – Ergebnis an mich zurückgeben
 
 47. Prüfe, ob die Dateien vertrauliche Daten enthalten. `5a` und `5c` enthalten LV-Mengen, aber keine Preise.
-48. Hänge `0_Zusammenfassung.txt`, `1_Kategorien.csv`, `3_Parameter.csv`, `6_Verknuepfungen.csv` und `7_Filter.csv` an deine nächste Nachricht an.
+48. Hänge `0_Zusammenfassung.txt`, `1_Kategorien.csv`, `3_Parameter.csv`, `6_Verknuepfungen.csv`, `7_Filter.csv`, `8_Werte.csv` und `9_Verschachtelung.csv` an deine nächste Nachricht an.
 49. Hänge `2_Kombinationen.csv`, `4_Modell_fehlt_in_DB.csv` und die `5`-Dateien an, wenn das erlaubt ist.
 
 ## Wenn etwas nicht klappt
