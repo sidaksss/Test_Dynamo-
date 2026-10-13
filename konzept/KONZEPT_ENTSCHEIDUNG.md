@@ -182,27 +182,32 @@ Es gilt: **eigene Parameter, am Exemplar, nie in `ZWP_…` schreiben.**
 | Parameter (Vorschlag) | Ebene | Inhalt |
 |---|---|---|
 | `LV_Positionsnummer` | Exemplar, Text | LV-Position. Der Name steht bereits in `shared_parameters/` und wird **einheitlich für Modul 1 und 2** verwendet. |
-| `LV_Leistungsnummer` | Exemplar, Text | Produkt bzw. Leistung aus SAP; hilfreich, solange die Position noch offen ist |
 | `LV_Zuordnung_Status` | Exemplar, Text | `automatisch`, `geprüft`, `offen`, `Widerspruch`, `nicht im Umfang` |
 
 **Warum am Exemplar statt am Typ?** Die Position hängt von der Anlage ab (W5). Zwei gleiche Fühler in zwei Anlagen können zu zwei Positionen gehören. Ein Typparameter, wie heute `LV_Nummer`, kann das nicht abbilden.
 
 **Leistungsnummer und Positionsnummer – der Unterschied:**
 
-| | `LV_Leistungsnummer` | `LV_Positionsnummer` |
+| | Leistungsnummer | `LV_Positionsnummer` |
 |---|---|---|
 | Frage | **Was** ist das für ein Gerät bzw. eine Leistung? | **In welcher Zeile** des LV wird es abgerechnet? |
 | Vergleich | Artikelnummer im Katalog („Milch 1 l“) | Zeile auf einer bestimmten Bestellung („Zeile 3: Milch für Filiale Nord“) |
 | Beispiel `WK_238` | `QAM2112.040` | `05.03.10` (Kanalfühler der TKA 03) [Beispielwert] |
 | Gleich für alle gleichen Geräte? | **ja**, überall dieselbe | **nein**: Derselbe Fühler kann je nach Anlage in `05.01.20` oder `05.03.10` stehen |
-| Woher | automatisch aus „Modell“ (Stufen 1–3), sicher | aus der Leistungsnummer; bei mehreren passenden Zeilen über die Abschnitts-Tabelle T3 |
+| Woher | aus „Modell“ (Stufen 1–2) bzw. der Typ-Tabelle T2 (Stufe 3) | aus der Leistungsnummer; bei mehreren passenden Zeilen über die Abschnitts-Tabelle T3 |
+| Wo gespeichert | **kein eigener Revit-Parameter**, nur als Spalte in der Momentaufnahme (6.2) | eigener Parameter (wenn Schreiben erlaubt) **und** Momentaufnahme |
 
-Beide werden gebraucht:
-- Die Leistungsnummer steht fast immer sofort fest.
-- Die Positionsnummer ist manchmal noch offen, bis die Entscheidung in T3 gefallen ist. So lange kann man je Leistungsnummer schon zählen und gegen das LV prüfen.
+**Warum kein eigener Parameter `LV_Leistungsnummer`?** (Entscheidung nach Rückfrage)
+- Bei Siemens-Produkten steht die Leistungsnummer **schon** im Parameter „Modell“. Ein zweiter Parameter mit demselben Inhalt wäre doppelte Pflege, und genau die soll vermieden werden.
+- Doppelte Werte veralten: Ändert der Planer „Modell“, stimmt ein gespeicherter zweiter Wert nicht mehr.
+- Wo „Modell“ und SAP-Leistungsnummer **voneinander abweichen**, ist die Leistungsnummer ein **Rechenergebnis**, das das Skript bei jedem Lauf neu bildet:
+  - abweichende Schreibweise, z. B. `QAM2112.040  Temperatur PT1000 0.4m(0)` → `QAM2112.040`,
+  - leeres „Modell“ bei Generikfamilien und Trassen → Wert aus T2.
+
+  Dafür reicht eine Spalte in der Momentaufnahme. Dort ist sie für die Nachvollziehbarkeit und für die Zählung je Leistungsnummer nützlich, solange die Position noch offen ist.
 - `LV_Zuordnung_Status` sagt, wie sicher die Positionsnummer ist.
 
-**Falls Siemens nicht ins Modell schreiben darf (F6):** Dieselben drei Werte stehen dann nur in der Momentaufnahme (6.2). Modul 2 funktioniert trotzdem (6.8).
+**Falls Siemens nicht ins Modell schreiben darf (F6):** Positionsnummer und Status stehen dann nur in der Momentaufnahme (6.2). Modul 2 funktioniert trotzdem (6.8).
 
 ### 5.5 Unsicherheit abbilden
 
@@ -354,7 +359,7 @@ Mit dem SAP-Einheitspreis lässt sich der Betrag je Zeile dazurechnen.
 | Heute | Künftig |
 |---|---|
 | handgepflegte `LV_Datenbank.csv` | SAP-LV (XLSX) direkt + T2 + T3 |
-| Typparameter `LV_Nummer` | Exemplarparameter `LV_Positionsnummer`, `LV_Leistungsnummer`, `LV_Zuordnung_Status`; Schreiben optional (6.8) |
+| Typparameter `LV_Nummer` | Exemplarparameter `LV_Positionsnummer` und `LV_Zuordnung_Status`; Leistungsnummer nur in der Momentaufnahme; Schreiben optional (6.8) |
 | nur exakter Modell-Vergleich | Kaskade 5.2 inkl. Normalisierung (erstes Wort, ohne Leerzeichen) |
 | Fehlerliste je Bauteil | Fehler- und Prüfliste **je Kombination** |
 | bricht bei belegten Bauteilen ab | meldet „belegt von …“, schreibt den Rest |
