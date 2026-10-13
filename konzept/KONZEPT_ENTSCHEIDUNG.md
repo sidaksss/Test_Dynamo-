@@ -8,11 +8,12 @@
 > - `rds_mapping/DIAGNOSE_AUSWERTUNG_1.md` (echte Daten, 10.882 Elemente)
 > - der SAP-Beispielexport
 > - deine Antworten auf die 10 Fragen
+> - deine Screenshots aus dem Revit-Modell (Eigenschaften, Typeneigenschaften)
 >
 > **Kennzeichnung im Text:**
 > - **[Befund]**: aus echten Daten belegt.
 > - **[Annahme]**: plausibel, aber nicht belegt. Schwellenwerte sind immer Annahmen.
-> - **[Offen]**: braucht eine Antwort (Kapitel 11).
+> - **[Offen]**: braucht eine Antwort (Kapitel 12).
 >
 > **Status des Diagnose-Skripts** `konzept/diagnose/GA_Diagnose.dyn`: nur mit simulierten Daten (Mock) getestet. **Der Test in echtem Revit steht bei dir aus.**
 
@@ -70,6 +71,24 @@
 | W9 | Masterpositionen können teilweise (nur einzelne Unterpositionen) im Nachtrag landen. | deine Antwort 8 |
 | W10 | Bei Siemens ist Copilot freigegeben, darin ist Claude nutzbar. | deine Antwort 9 |
 | W11 | Eine Fachperson kann ~50 Fälle von Hand prüfen, aber nicht 500. | deine Antwort 10 |
+| W12 | Der Fühler `WK_238` liegt im **Arbeitssatz** (Revit: „Bearbeitungsbereich“) `480_Gebäudeautomation`. Die Planer trennen GA-Bauteile offenbar über Arbeitssätze. | Screenshot [Befund für dieses Bauteil] |
+| W13 | `ZWP_400_Kostengruppe` existiert als **Typ**parameter, ist beim Typ `QAM2112.040` aber **leer**. | Screenshot [Befund] |
+| W14 | `ZWP_400_Freigegeben` ist ein Häkchen am **Exemplar** (hier gesetzt). Es kommt als Parameter für die Ausblend-Filter in Frage. | Screenshot [Befund]; Filterbezug [Annahme] |
+| W15 | Siemens arbeitet offenbar im **Planermodell**: Der Dateiname enthält „ZWP-5-ELT“, und der aktive Arbeitssatz „400_Koordination“ ist „nicht bearbeitbar“. | Screenshot [Annahme] |
+| W16 | Am Typ stehen produktbezogene Angaben: Modell, Hersteller, Beschreibung („Luftkanaltemperaturfühler 400 mm, Pt1000“), Gewerk `COM`, Klassifizierungsnummer `23.85.80.11.21`. Am Exemplar stehen gerätebezogene Angaben: RDS, Kennzeichen, Kommentar, Datenpunktbeschreibung, Controller, Freigabe. | Screenshot [Befund] |
+
+### 2.1 Warum liegen die RDS-Angaben am Exemplar?
+
+Faustregel in Revit:
+- Ist ein Wert für **alle gleichen Geräte** gleich, gehört er an den **Typ** (Modell, Hersteller, Beschreibung).
+- Unterscheidet er sich **von Gerät zu Gerät**, gehört er an das **Exemplar**.
+
+Das RDS-Kennzeichen beschreibt das einzelne eingebaute Gerät:
+- Es enthält Ort, Anlage und Zählnummer. Es soll genau **ein** Gerät eindeutig benennen.
+- Auch die Funktion hängt vom Einbauort ab: Derselbe Typ `QAM2112.040` misst einmal Zuluft, einmal Abluft (10 Kombinationen in Diagnose 1). Als Typparameter bräuchte man dafür viele Kopien desselben Typs.
+- Datenpunkt-, Controller- und Freigabeangaben gehören aus demselben Grund an das Exemplar.
+
+**Folge für das Konzept:** Auch die LV-Position gehört an das Exemplar (5.4), denn sie hängt wie das RDS von der Anlage ab.
 
 ---
 
@@ -118,6 +137,7 @@ Die Entscheidung triffst **du**. Die Diagnose liefert dafür die Kriterien (Date
 | U3 Im LV vorhanden | „Modell im LV“ | Anteil, dessen Modell als Leistungsnummer im SAP-LV steht. **Das stärkste Kriterium**, denn das LV ist verbindlich. |
 | U4 Kostengruppe | „KG im Familien-/Typnamen“ und „Kostengruppen-Parameter“ | z. B. `ZWP_480_…` → KG 480 (Gebäudeautomation) **[Annahme]** |
 | U5 Planer-Kennzeichen | „ZWP_400_LP8_Abrechnung angehakt“ | nur verwendbar, wenn gepflegt (Regel R6) |
+| U6 Arbeitssatz | „Arbeitssaetze“ | z. B. `480_Gebäudeautomation` (W12). Möglicherweise das klarste Kriterium, wenn die Planer GA-Bauteile konsequent in diesen Arbeitssatz legen. **[Annahme, mit der Diagnose prüfen]** |
 
 **Vorschlag für eine Regel**, über die du entscheidest:
 - Ein Bauteil gehört zum Umfang, wenn es über die Kaskade einer LV-Position zugeordnet werden kann (U3 bzw. Typ-Tabelle).
@@ -129,7 +149,7 @@ Die Entscheidung triffst **du**. Die Diagnose liefert dafür die Kriterien (Date
 | Stufe | Prüfung | Vertrauen | Ergebnis |
 |---|---|---|---|
 | 0 | Hat das Bauteil schon eine eigene LV-Position? | – | behalten (nicht überschreiben), nur gegenprüfen |
-| 0b | Ist das Bauteil verschachtelt (Unterfamilie) oder entfallen (Kapitel 6.3)? | – | **nicht zählen** |
+| 0b | Ist das Bauteil verschachtelt (Unterfamilie) oder entfallen (Kapitel 6.4)? | – | **nicht zählen** |
 | 1 | „Modell“ (normalisiert: Großschreibung, ohne Leerzeichen, erstes Wort) = SAP-`Leistungsnummer`, `L-Identifizierer` oder `Materialnummer` | HOCH | Produkt bestimmt |
 | 2 | Typname bzw. Familienname enthält eine Leistungsnummer aus dem LV (z. B. `…_Kanaltemperaturfühler_QAM2112` → `QAM2112…`) | HOCH | Produkt bestimmt |
 | 3 | **Typ-Tabelle** (einmal gepflegt): Familie \| Typ → Leistungsnummer, Mengenart, Mengenfaktor | HOCH, wenn geprüft | Produkt bestimmt |
@@ -151,7 +171,7 @@ Die Entscheidung triffst **du**. Die Diagnose liefert dafür die Kriterien (Date
 | **T3 Abschnitts-Tabelle** | Leistungsnummer \| Anlage (RDS-System + Anlagennummer, z. B. `TKA.03`) → LV-Position | Fachperson | **einmal je Kombination**, nur für mehrdeutige Produkte |
 
 Wichtig:
-- **Keine Pflege am einzelnen Bauteil.** Das Skript schreibt das Ergebnis in die Bauteile. Ein Mensch entscheidet nur in T2 und T3.
+- **Keine Pflege am einzelnen Bauteil.** Das Skript schreibt das Ergebnis in die Momentaufnahme und, wenn erlaubt, in die Bauteile. Ein Mensch entscheidet nur in T2 und T3.
 - Beim nächsten Modellstand oder Nachtrag werden alle früheren Entscheidungen automatisch wieder angewendet. Neu entscheiden muss man nur für **neue** Kombinationen.
 - **Umfang [Annahme]:** In Diagnose 1 gibt es 148 verschiedene Anlagen (System + Nummer). Wie viele T3-Entscheidungen wirklich nötig sind, zeigt die neue Diagnose in `5a_LV_Positionen.csv` (Bewertung „Position mehrdeutig“) zusammen mit `2_Kombinationen.csv`.
 
@@ -166,6 +186,23 @@ Es gilt: **eigene Parameter, am Exemplar, nie in `ZWP_…` schreiben.**
 | `LV_Zuordnung_Status` | Exemplar, Text | `automatisch`, `geprüft`, `offen`, `Widerspruch`, `nicht im Umfang` |
 
 **Warum am Exemplar statt am Typ?** Die Position hängt von der Anlage ab (W5). Zwei gleiche Fühler in zwei Anlagen können zu zwei Positionen gehören. Ein Typparameter, wie heute `LV_Nummer`, kann das nicht abbilden.
+
+**Leistungsnummer und Positionsnummer – der Unterschied:**
+
+| | `LV_Leistungsnummer` | `LV_Positionsnummer` |
+|---|---|---|
+| Frage | **Was** ist das für ein Gerät bzw. eine Leistung? | **In welcher Zeile** des LV wird es abgerechnet? |
+| Vergleich | Artikelnummer im Katalog („Milch 1 l“) | Zeile auf einer bestimmten Bestellung („Zeile 3: Milch für Filiale Nord“) |
+| Beispiel `WK_238` | `QAM2112.040` | `05.03.10` (Kanalfühler der TKA 03) [Beispielwert] |
+| Gleich für alle gleichen Geräte? | **ja**, überall dieselbe | **nein**: Derselbe Fühler kann je nach Anlage in `05.01.20` oder `05.03.10` stehen |
+| Woher | automatisch aus „Modell“ (Stufen 1–3), sicher | aus der Leistungsnummer; bei mehreren passenden Zeilen über die Abschnitts-Tabelle T3 |
+
+Beide werden gebraucht:
+- Die Leistungsnummer steht fast immer sofort fest.
+- Die Positionsnummer ist manchmal noch offen, bis die Entscheidung in T3 gefallen ist. So lange kann man je Leistungsnummer schon zählen und gegen das LV prüfen.
+- `LV_Zuordnung_Status` sagt, wie sicher die Positionsnummer ist.
+
+**Falls Siemens nicht ins Modell schreiben darf (F6):** Dieselben drei Werte stehen dann nur in der Momentaufnahme (6.2). Modul 2 funktioniert trotzdem (6.8).
 
 ### 5.5 Unsicherheit abbilden
 
@@ -186,40 +223,73 @@ Es gilt: **eigene Parameter, am Exemplar, nie in `ZWP_…` schreiben.**
 | Vergleich | Frage | Ergebnis |
 |---|---|---|
 | **Modellstand alt ↔ neu** | Was hat sich durch *diese* Planungsänderung geändert? | Nachtragsliste: Mehrung, Minderung, Neu je LV-Position |
-| **Soll (LV) ↔ Ist (Modell)** | Passt der aktuelle Modellstand insgesamt zum beauftragten LV? | Plausibilitätsprüfung; deckt auch Fehler im ersten Modellstand oder im LV auf |
+| **Soll (LV) ↔ Ist (Modell)** | Passt der aktuelle Modellstand insgesamt zum beauftragten LV? | Gegenprobe; deckt auch Fehler im ersten Modellstand oder im LV auf |
 
 **Empfehlung:**
 - Die Nachtragsliste kommt aus dem **Versionsvergleich**.
-- Soll/Ist ist die **Gegenprobe**. Weicht eine Position im Soll/Ist stark ab, ohne dass der Versionsvergleich eine Änderung zeigt, ist entweder die Zuordnung falsch oder das LV hatte schon vorher eine Abweichung.
-- Die neue Diagnose zeigt Soll/Ist schon grob je Leistungsnummer (`5c_Mengen_je_Leistungsnummer.csv`).
+- Soll/Ist ist die **Gegenprobe**. Weicht eine Position im Soll/Ist stark ab, ohne dass der Versionsvergleich eine Änderung zeigt, ist entweder die Zuordnung falsch oder die Abweichung bestand schon vor dem Nachtrag. Solche Positionen kommen auf eine Prüfliste.
+- Die Diagnose zeigt Soll/Ist schon grob je Leistungsnummer (`5c_Mengen_je_Leistungsnummer.csv`).
 
-### 6.2 Bauteile wiedererkennen
+### 6.2 Momentaufnahmen statt Dateivergleich
 
-- Über die **UniqueId**. Das macht Modul 2 heute schon.
+Revit merkt sich keinen früheren Stand. Deshalb liest Modul 2 bei jedem wichtigen Stand das Modell aus und speichert das Ergebnis als **Momentaufnahme** (CSV-Datei) außerhalb des Modells:
+
+| Stand | Wann | Datei (Beispiel) |
+|---|---|---|
+| V0 – Basis | bei Auftrag (LV-Stand) oder nach dem letzten freigegebenen Nachtrag | `Stand_V29_2026-08-01.csv` |
+| V1 – neu | wenn der Planer einen neuen Modellstand liefert | `Stand_V30_2026-09-01.csv` |
+
+Verglichen werden **nur diese beiden Dateien**. Nach der Freigabe des Nachtrags wird V1 zur Basis für den nächsten Nachtrag.
+
+**Warum nicht zwei Revit-Dateien direkt vergleichen?**
+- Alte Planerstände sind große Dateien mit Arbeitssätzen. Sie gleichzeitig zu öffnen ist langsam und fehleranfällig.
+- Eine Momentaufnahme ist klein und lässt sich in Excel prüfen.
+- Sie ist der **Nachweis**, welcher Stand abgerechnet wurde. Das ist für Nachtrag und Bachelorarbeit wertvoll.
+- Autodesk Docs bietet einen grafischen Versionsvergleich (hinzugefügt / entfernt / geändert). Der rechnet aber nicht in LV-Positionen und LV-Einheiten. Er bleibt eine nützliche Sichtkontrolle.
+- Für einen Stand, der schon vorbei ist, öffnet man die alte Modelldatei **einmal** (vom Zentralmodell getrennt) und erzeugt daraus die Momentaufnahme.
+
+**Inhalt einer Momentaufnahme** (eine Zeile pro Bauteil, Vorschlag):
+
+| Spalte | Wozu |
+|---|---|
+| UniqueId (+ Name der Verknüpfung, falls das Bauteil aus einem Link stammt) | Bauteil über Versionen hinweg wiedererkennen |
+| Element-ID, Kennzeichen (z. B. `WK_238`), RDS_Code | Anzeige für Menschen; RDS_Code zusätzlich als Ersatzschlüssel (6.3) |
+| Kategorie, Familie, Typ, Modell, Arbeitssatz | Nachvollziehbarkeit, Umfang |
+| LV-Positionsnummer (Unterposition), Leistungsnummer, Zuordnungsstatus | Ergebnis der Zuordnung (Kapitel 5) |
+| Grundmenge (1 Stück oder Länge in m) und Mengenfaktor (1 oder 0) | Menge in LV-Einheit (6.5) |
+| zählt mit? ja/nein + Grund | verschachtelt, entfallen, Abbruchphase, nicht im Umfang (6.4) |
+| Stand, Datum, Modelldatei | z. B. „V30, 2026-09-01“ aus dem Dateinamen |
+
+### 6.3 Bauteile wiedererkennen
+
+- Über die **UniqueId** (+ Verknüpfungsname bei Link-Bauteilen). Das macht Modul 2 heute schon.
 - Die kurze Element-ID (`IntegerValue`) dient nur zur Anzeige. In Revit 2026 ist `IntegerValue` entfallen. Modul 2 muss deshalb wie `lv_mapping` den sicheren Weg (`Value`, sonst `IntegerValue`) nutzen.
+- **Löscht der Planer ein Bauteil und zeichnet es neu**, statt es zu ändern, bekommt es eine neue UniqueId. Es erscheint dann als ENTFALLEN + NEU.
+  - Je Position gleicht sich das aus (−1 + 1 = 0). Eine falsche Mehrung entsteht also nicht.
+  - Zusätzlich vergleicht das Skript das **RDS-Kennzeichen**: Taucht dasselbe Kennzeichen einmal als entfallen und einmal als neu auf, wird das Paar als „Austauschpaar“ markiert.
+  - Hier ist das RDS als **zweiter Schlüssel** nützlich. In Diagnose 1 gab es aber 15 doppelt vergebene Kennzeichen. Deshalb gilt das nur als Hinweis, nicht als sichere Zuordnung.
 
-### 6.3 „Entfallen“ ohne Abhängigkeit von der Ansicht
+### 6.4 „Entfallen“ ohne Abhängigkeit von der Ansicht
 
-Der Vergleich darf **nie** fragen, ob ein Bauteil sichtbar ist, sondern nur nach einem **Parameterwert**. Ein Bauteil gilt als entfallen, wenn mindestens eins davon zutrifft:
+Der Vergleich darf **nie** fragen, ob ein Bauteil sichtbar ist, sondern nur nach einem **Parameterwert**. Ein Bauteil zählt **nicht** mit, wenn mindestens eins davon zutrifft:
 
 1. Es ist im neuen Modellstand nicht mehr vorhanden (gelöscht).
 2. Es ist **verschachtelt** (Unterfamilie). Solche Bauteile werden nie gezählt.
-3. Der Parameter, nach dem die Ausblend-Filter des Planers arbeiten, hat den Wert „entfallen“. Den Parameter selbst finden wir mit der neuen Diagnose (siehe unten).
+3. Der Parameter, nach dem die Ausblend-Filter des Planers arbeiten, hat den Wert für „entfallen“. **Kandidat [Annahme]:** das Häkchen `ZWP_400_Freigegeben` am Exemplar (W14).
 4. Die Revit-Phase „Abgebrochen“ ist gesetzt (die Diagnose zählt das mit).
 
 **So findest du heraus, nach welchem Parameter die Filter arbeiten:**
-- Die neue Diagnose schreibt `7_Filter.csv`.
+- Die Diagnose schreibt `7_Filter.csv`.
 - Darin steht für jeden Ansichtsfilter: Name, Kategorien, **Regeln** (Parameter, Vergleich, Wert) und in wie vielen Ansichten bzw. Vorlagen er etwas **ausblendet**.
 - Der Filter, der in den GA-Ansichten ausblendet, verrät den Parameter.
 - Wir lesen ihn nur. Ist es ein `ZWP_…`-Parameter, ist das in Ordnung, denn Lesen ist erlaubt.
 
-### 6.4 Mengen in LV-Einheiten je LV-Position
+### 6.5 Mengen in LV-Einheiten je LV-Position
 
 ```
-Menge(Position) = Summe über alle Bauteile der Position:
+Menge(Position) = Summe über alle zählenden Bauteile der Position:
                   Mengenfaktor (aus T2) × Grundmenge
 Grundmenge      = 1 bei Einheit ST, Länge bei m, Fläche bei m² …
-nicht gezählt   = verschachtelte, entfallene, nicht im Umfang
 ```
 
 - **n:1 und Masterpositionen:**
@@ -228,43 +298,63 @@ nicht gezählt   = verschachtelte, entfallene, nicht im Umfang
   - Weil auch Teile einer Masterposition in den Nachtrag gehen können (W9), wird **je Unterposition** bewertet.
 - **Sets** (z. B. Wetterstation aus mehreren Bauteilen): Leitbauteil Mengenfaktor 1, Nebenbauteile 0. Das steht in T2 und wird einmal gepflegt.
 
-### 6.5 Klassifikation je LV-Position
+### 6.6 Der Vergleich in vier Schritten
 
-| Fall | Regel |
+**Schritt 1 – jedes Bauteil einordnen** (Abgleich über die UniqueId):
+
+| Fall | Bedingung |
 |---|---|
-| NEU_POSITION | Menge alt = 0, Menge neu > 0 |
-| MEHRUNG / MINDERUNG | Menge neu > bzw. < Menge alt |
-| UNVERÄNDERT | gleich |
-| **PRODUKT NICHT IM LV** | Siemens-typisches Bauteil, Leistungsnummer fehlt im LV → Kandidat für eine **neue** LV-Position |
+| NEU | nur in V1, oder in V0 „zählt nicht“ und in V1 „zählt“ |
+| ENTFALLEN | nur in V0, oder in V0 „zählt“ und in V1 „zählt nicht“ |
+| UMGEORDNET | in beiden Ständen, aber mit anderer LV-Position (z. B. Typ getauscht) |
+| MENGE GEÄNDERT | gleiche Position, andere Grundmenge (z. B. Trasse länger) |
+| UNVERÄNDERT | alles gleich |
 
-Zu jeder Position gibt es eine Liste der verursachenden Bauteile: neu, entfallen, umgeordnet.
+**Schritt 2 – je LV-Position zusammenzählen** (Formel 6.5): Menge V0, Menge V1, Delta = V1 − V0.
 
-### 6.6 Verknüpfte Modelle (20 Links)
+**Schritt 3 – je Position bewerten.** Die Zahlen sind ein Beispiel:
+
+| Position | Menge V0 | Menge V1 | Delta | Ergebnis |
+|---|---|---|---|---|
+| 05.01.20 Kanalfühler | 3 | 5 | +2 | MEHRUNG |
+| 05.03.10 Kanalfühler | 4 | 3 | −1 | MINDERUNG |
+| 05.01.30 Frostschutz | 0 | 1 | +1 | NEU_POSITION |
+| – (`QMX3.P37` fehlt im LV) | – | 2 | +2 | **PRODUKT NICHT IM LV** → Kandidat für eine neue LV-Position |
+
+Mit dem SAP-Einheitspreis lässt sich der Betrag je Zeile dazurechnen.
+
+**Schritt 4 – Nachweisliste:**
+- Zu jeder Mehrung und Minderung gehört eine Liste der verursachenden Bauteile: Fall (neu, entfallen, umgeordnet, Austauschpaar), Kennzeichen, RDS-Kennzeichen, Element-ID.
+- So kann jeder nachprüfen, woher eine Zahl kommt.
+
+### 6.7 Verknüpfte Modelle (20 Links)
 
 | | Bauteile im offenen Modell | Bauteile in einem Link |
 |---|---|---|
-| Lesen (Diagnose, Vergleich) | ja | ja, wenn der Link geladen ist |
-| Schreiben (Zuweisung) | ja, wenn nicht belegt | **nein**: Ein Link kann aus dem offenen Modell heraus nicht geändert werden |
+| Lesen (Diagnose, Momentaufnahme) | ja | ja, wenn der Link geladen ist |
+| Schreiben (Zuweisung) | ja, wenn erlaubt und nicht belegt | **nein**: Ein Link kann aus dem offenen Modell heraus nicht geändert werden |
 
 - In Diagnose 1 lagen 10.882 Elemente der untersuchten Kategorien **im offenen Modell**, darunter alle Siemens-Familien.
 - Ob zusätzlich GA-Bauteile in Links liegen, zeigt `6_Verknuepfungen.csv`.
-- **Falls ja:** Für diese Bauteile wird die Zuordnung **nicht** in einen Parameter geschrieben, sondern in eine externe Tabelle (Link-Datei + UniqueId → LV-Position). Modul 2 liest beides.
+- Link-Bauteile werden in der Momentaufnahme mit „Verknüpfung + UniqueId“ geführt. Ihre Zuordnung steht dann **nur** in der Momentaufnahme, nicht in einem Parameter.
 
-### 6.7 Worksharing: Darf ich schreiben?
+### 6.8 Worksharing: Muss überhaupt geschrieben werden?
 
-- Ein Bauteil, das ein anderer Benutzer gerade belegt, kann nicht geändert werden. Das Schreiben schlägt dann fehl.
-- Die Diagnose zählt solche Bauteile („von anderen Benutzern belegt“) und zeigt die Arbeitssätze je Kategorie.
-- `lv_mapping` muss solche Fälle künftig **abfangen und melden**, statt abzubrechen.
-- **[Offen]** Organisatorisch: Darf Siemens im Planermodell überhaupt eigene Parameter schreiben? Oder arbeitet Siemens in einem eigenen Modell, in dem das Planermodell nur verknüpft ist? Im zweiten Fall gilt Kapitel 6.6, Spalte „Link“: Dann ist die externe Tabelle der Normalfall.
+- Ein Bauteil, das ein anderer Benutzer belegt oder dessen Arbeitssatz nicht bearbeitbar ist (Screenshot: „400_Koordination (nicht bearbeitbar)“), kann nicht geändert werden. Das Schreiben schlägt dann fehl.
+- Die Diagnose zählt belegte Bauteile und zeigt die Arbeitssätze je Kategorie. `lv_mapping` muss solche Fälle künftig **abfangen und melden**, statt abzubrechen.
+- **Die wichtigste Folge:**
+  - Der Versionsvergleich **liest nur**. Wird die Zuordnung bei jeder Momentaufnahme frisch aus T1–T3 berechnet (Kapitel 5), braucht Modul 2 **keine Schreibrechte** im Modell.
+  - Das Schreiben in eigene Parameter (5.4) ist dann eine Bequemlichkeit, z. B. für Bauteillisten und Filter in Revit, aber keine Voraussetzung.
+  - Das macht das Konzept robust gegenüber der offenen Frage F6.
 
-### 6.8 Was sich ändern muss
+### 6.9 Was sich ändern muss
 
 **An `lv_mapping/`** (später, nicht jetzt):
 
 | Heute | Künftig |
 |---|---|
 | handgepflegte `LV_Datenbank.csv` | SAP-LV (XLSX) direkt + T2 + T3 |
-| Typparameter `LV_Nummer` | Exemplarparameter `LV_Positionsnummer`, `LV_Leistungsnummer`, `LV_Zuordnung_Status` |
+| Typparameter `LV_Nummer` | Exemplarparameter `LV_Positionsnummer`, `LV_Leistungsnummer`, `LV_Zuordnung_Status`; Schreiben optional (6.8) |
 | nur exakter Modell-Vergleich | Kaskade 5.2 inkl. Normalisierung (erstes Wort, ohne Leerzeichen) |
 | Fehlerliste je Bauteil | Fehler- und Prüfliste **je Kombination** |
 | bricht bei belegten Bauteilen ab | meldet „belegt von …“, schreibt den Rest |
@@ -272,13 +362,19 @@ Zu jeder Position gibt es eine Liste der verursachenden Bauteile: neu, entfallen
 | – | Testwerte `…test` aus Diagnose 1 vorher entfernen |
 
 **An Modul 2 (`dynamo/python/`):**
-- Parametername `LV_Positionsnummer` einheitlich. Lesen erst am Exemplar, dann am Typ.
-- `IntegerValue` durch den sicheren Weg ersetzen.
-- „Entfallen“ nach Kapitel 6.3 bestimmen, nie nach Sichtbarkeit.
-- Menge nach Kapitel 6.4 (Mengenfaktor, Einheit, verschachtelte ausschließen).
-- Bewertung je **Unterposition**, Master als Summe.
-- Soll/Ist-Gegenprobe gegen das SAP-LV.
-- Externe Zuordnungstabelle für Link-Bauteile.
+
+| Heute | Künftig |
+|---|---|
+| liest `LV_Positionsnummer` am Element, überspringt Bauteile ohne Wert | Zuordnung aus Kapitel 5; fehlt sie, wird das gemeldet statt übersprungen |
+| JSON-Snapshot nur mit zugeordneten Elementen | Momentaufnahme (CSV) aller Bauteile im Umfang nach 6.2 |
+| zählt Elemente | zählt Grundmenge × Mengenfaktor in LV-Einheit (6.5) |
+| kennt kein „entfallen“ | entfallen nach Filterparameter / Abbruchphase (6.4) |
+| zählt Unterfamilien mit | schließt verschachtelte Bauteile aus |
+| nur offenes Modell | auch Bauteile aus Verknüpfungen (6.7) |
+| `IntegerValue` | sicherer Weg über `Value` (Revit 2026) |
+| schreibt Nachtragsstatus in Bauteile | Vergleich rein lesend; Schreiben optional (6.8) |
+| Bewertung je LV-Position | je **Unterposition**, Master als Summe; Austauschpaare über RDS (6.3) |
+| keine Soll/Ist-Prüfung | Soll/Ist gegen das SAP-LV als Gegenprobe (6.1) |
 
 ---
 
@@ -340,20 +436,56 @@ Alle Schwellen sind **[Annahmen]** und sollten nach dem nächsten Diagnoselauf g
 | **R4** RDS als Schlüssel zulässig | in `2_Kombinationen.csv` gehört jeder RDS-Schlüssel (System \| Funktion) bei ≥ 95 % der Elemente zu genau einem Produkt | Diagnose 1: **70 % → nicht erfüllt**, RDS nur zur Plausibilitätsprüfung |
 | **R5** T3 nötig | `5a_LV_Positionen.csv` enthält „Position mehrdeutig“ | Abschnitts-Entscheidungen einmalig sammeln |
 | **R6** `ZWP_400_LP8_Abrechnung` als Umfangsfilter geeignet | angehakt bei ≥ 90 % der Bauteile, die über das LV im Umfang sind, **und** bei ≤ 5 % der Bauteile außerhalb (Spalten „Siemens-typisch UND/OHNE LP8“, „LP8 OHNE Siemens-typisch“) | Diagnose 1: **0 % angehakt → derzeit ungeeignet**; höchstens später als zusätzlicher Hinweis |
-| **R7** Link-Weg nötig | `6_Verknuepfungen.csv` zeigt Siemens-typische Bauteile in Links | externe Zuordnungstabelle (6.6) |
+| **R7** Link-Weg nötig | `6_Verknuepfungen.csv` zeigt Siemens-typische Bauteile in Links | Zuordnung nur in der Momentaufnahme (6.7) |
 | **R8** Kategorie in den Umfang aufnehmen | U3 > 0 oder U1 ≥ 20 % oder U2 ≥ 50 % (Kapitel 5.1) | Kandidat; **du entscheidest** |
 
 ---
 
-## 10. Stufenplan
+## 10. Stufenplan, Werkzeuge und Aufwand
+
+### 10.1 Stufenplan
 
 | Stufe | Inhalt | Ergebnis |
 |---|---|---|
 | **0 Messen** (jetzt) | `GA_Diagnose.dyn` mit deinen 8 Kandidat-Kategorien, der Datenbank-CSV und **dem SAP-LV dieses Projekts** | Umfang festlegen (R8), R1–R7 auswerten, Filterparameter finden, Links und Worksharing klären |
-| **1 Minimalversion** | Kaskade Stufen 0–2 und 5; Schreiben in eigene Exemplarparameter; Prüf-/Fehlerliste je Kombination; belegte Bauteile melden | erste Trefferquote |
+| **1 Minimalversion** | Momentaufnahme mit Kaskade Stufen 0–2 und 5; Schreiben in eigene Exemplarparameter optional (6.8); Prüf-/Fehlerliste je Kombination; belegte Bauteile melden | erste Trefferquote |
 | **2 Tabellen** | T2 (Typ-Tabelle) und T3 (Abschnitts-Tabelle) mit Prüfliste → Übernahme | volle Abdeckung, Pflege nur einmal |
 | **3 KI** | Variante a) über Copilot für die offenen T2-Zeilen (nur, wenn R3 zutrifft) | weniger Handarbeit, messbar |
-| **4 Modul 2** | Versionsvergleich + Soll/Ist, Entfallen nach Parameter, Mengen nach 6.4, Links und Worksharing | Nachtragsliste je Unterposition |
+| **4 Modul 2** | Momentaufnahmen, Versionsvergleich + Soll/Ist, Entfallen nach Parameter, Mengen nach 6.5, Links | Nachtragsliste je Unterposition |
+
+### 10.2 Werkzeuge
+
+Es werden nur Werkzeuge eingesetzt, die bei Siemens schon vorhanden sind. **Keine Zusatzinstallation, keine KI-Schnittstelle (API).**
+
+| Baustein | Werkzeug | Bemerkung |
+|---|---|---|
+| Diagnose | Dynamo-Skript `GA_Diagnose.dyn` (Python-Knoten, CPython3) in Revit | liegt vor, liest nur |
+| **Momentaufnahme + Zuordnung** (Modul 1 neu) | Dynamo-Skript in Revit, ein Python-Knoten | baut auf Diagnose und `lv_mapping` auf; liest Modell, SAP-LV, T2, T3; schreibt CSV und optional eigene Parameter in **einer** Transaktion |
+| **Vergleich + Nachtragsliste** (Modul 2 neu) | Dynamo-Skript mit Python-Knoten **ohne Revit-Zugriff** | liest zwei Momentaufnahmen + SAP-LV. Weil es Revit nicht braucht, kann es vor der Übergabe **vollständig** mit Beispieldaten getestet werden. |
+| Tabellen T2, T3, Prüflisten | Excel (CSV) | pflegt ein Mensch; einmal je Entscheidung |
+| Bericht | CSV, öffnet direkt in Excel; später optional formatiertes XLSX über den Dynamo-Knoten `Data.OpenXMLExportExcel` (braucht kein installiertes Excel) | |
+| KI-Vorschläge für T2 | Microsoft Copilot (mit Claude), einmalig | nur wenn Regel R3 zutrifft |
+| Ablage | Projektordner (z. B. Teams/SharePoint), feste Dateinamen mit Stand und Datum | Momentaufnahmen **nie überschreiben** (Nachweis) |
+| Sichtkontrolle (optional) | Autodesk Docs Versionsvergleich; Revit-Bauteilliste auf eigene Parameter | nur ergänzend |
+
+### 10.3 Aufwand **[Annahme]**
+
+Der Engpass ist nicht das Programmieren, sondern die **Testrunden in echtem Revit**: Datei holen, ausführen, Ergebnis zurückschicken, Korrektur. Die Schätzung zählt **deine** Zeit.
+
+| Stufe | Inhalt | Testrunden | deine Zeit |
+|---|---|---|---|
+| 0 | Diagnose ausführen, Dateien schicken | 1 | ½ Tag |
+| 1 | Momentaufnahme + Zuordnung (Kaskade, Prüf-/Fehlerliste) | 2–3 | 1–2 Tage |
+| 2 | T2 anlegen (~100 Typen × 1–2 min) und T3 (je mehrdeutige Kombination ~1 min; Anzahl erst nach Stufe 0 bekannt) | 1 | 1 Tag |
+| 3 | KI-Vorschläge über Copilot (nur bei R3) | 1 | ½–1 Tag |
+| 4 | Vergleich + Nachtragsliste mit zwei echten Modellständen | 1–2 | 1–2 Tage |
+| – | Stichprobe für die Arbeit (50 Kombinationen, Fachperson 2–3 h) + Kennzahlen | – | 1 Tag |
+| **Summe** | | **6–9** | **ca. 5–8 Arbeitstage**, verteilt über 3–5 Wochen (Rückfragen beim Planer) |
+
+**Größte Unsicherheiten:**
+- F6 (Schreibrechte) ändert den Aufwand kaum, weil der Vergleich ohnehin rein lesend funktioniert (6.8).
+- Für Stufe 4 braucht es **zwei echte Modellstände**, z. B. V29 und V30.
+- Die Zahl der T3-Entscheidungen ist erst nach Stufe 0 bekannt.
 
 ---
 
@@ -385,12 +517,14 @@ K7 und K9 belegen deine Kernforderung **„Pflege nur einmal“** mit Zahlen.
 
 | Nr. | Frage | Stand |
 |---|---|---|
-| F1 | Nach welchem Parameter arbeiten eure Ausblend-Filter? | **wird durch die neue Diagnose beantwortet** (`7_Filter.csv`). Danach bitte bestätigen. |
-| F2 | Arbeitet Siemens in LP 8 im Planermodell oder in einem eigenen Modell mit Links? | offen; wichtig für 6.6 und 6.7 |
-| F3 | Gibt es einen Kostengruppen-Parameter? | Diagnose 1 hat nur die bekannten Namen geprüft. Die neue Diagnose durchsucht **alle** Parameter (`3_Parameter.csv`, Spalte „möglicher Kostengruppen-Parameter“). Hinweis: Die KG steht bei Generikfamilien im Namen (`ZWP_480_…`). |
+| F1 | Nach welchem Parameter arbeiten eure Ausblend-Filter? | **wird durch die neue Diagnose beantwortet** (`7_Filter.csv`). Kandidat: `ZWP_400_Freigegeben` (W14). Danach bitte bestätigen. |
+| F2 | Arbeitet Siemens in LP 8 im Planermodell oder in einem eigenen Modell mit Links? | Screenshot deutet auf das **Planermodell** (W15); bitte bestätigen. Wichtig für 6.7 und 6.8. |
+| F3 | Gibt es einen Kostengruppen-Parameter? | **Ja:** `ZWP_400_Kostengruppe` (Typparameter), beim gezeigten Typ aber leer (W13). Wie oft er gefüllt ist, zeigt die Diagnose (`3_Parameter.csv`). Die KG steht außerdem bei Generikfamilien im Namen (`ZWP_480_…`). |
 | F4 | Wer pflegt `ZWP_400_LP8_Abrechnung`, und wie verlässlich? | Diagnose 1: nirgends gesetzt. Wer es pflegen soll, kann nur der Planer bzw. die Projektleitung beantworten. |
 | F5 | Gehört zu einem RDS-Schlüssel immer genau eine LV-Position? | **beantwortet: Nein** (Kapitel 3, mit Daten belegt) |
 | F6 | Darf Siemens im Planermodell eigene Parameter anlegen und beschreiben, und auf welchem Arbeitssatz? | offen |
 | F7 | Gehören Kabeltrassen der KG 480 (`ZWP_480_Kabelrinne`, `…Kabelleiter`) zum Siemens-LV? Wenn ja: Abrechnung in Metern, Formteile im Meterpreis? | offen (aus Diagnose-Auswertung 1) |
 | F8 | Gibt es eine Copilot-Variante mit API-Zugang (für Variante b)? | nur relevant, falls b) später gewünscht |
 | F9 | Kannst du den SAP-LV-Export **dieses Projekts** für den Diagnoselauf verwenden? | Er bleibt auf deinem Rechner; ins öffentliche Repository kommt er nicht. |
+| F10 | Liegen **alle** Siemens-Bauteile im Arbeitssatz `480_Gebäudeautomation`, und liegen dort **nur** Siemens-Bauteile? | Diagnose zeigt die Arbeitssätze je Kategorie; die Regel kann nur der Planer bestätigen (U6). |
+| F11 | Welche zwei Modellstände (z. B. V29 und V30) können für den ersten Versionsvergleich genutzt werden? | nötig für Stufe 4 |
