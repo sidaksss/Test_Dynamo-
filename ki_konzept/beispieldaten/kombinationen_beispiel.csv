@@ -1,0 +1,10 @@
+Kategorie;Familie;Typ;Modell;RDS_Funktion;Kommentar
+HLS-Bauteile;SI_S2_COM_641_Tauchtemperaturfühler_QAE2112;Tauchfühler 100mm;;BTAV;
+HLS-Bauteile;SI_S2_COM_696_Frostwächter;Frostschutz;;BTAC;Frostschutzthermostat Lufterhitzer
+Elektrische Ausstattung;Generik_Modul;Modul 8 Kanal LCD;;;Universalmodul 8-Kanal mit Hand und LCD
+Elektrische Ausstattung;Generik_Modul;Modul 8 Kanal;;;Universalmodul 8 Kanäle
+HLS-Bauteile;SI_S2_COM_85_ANS_Anschalt_Steuermodul;E/A-Modul;;TFC_;Ein-/Ausgabemodul Brandfallsteuerung
+Datengeräte;Generik_Sensor;Sensor;;;
+Elektrische Ausstattung;Generik_AS;Automationsstation;;KEB_;BACnet Automationsstation bis 200 Datenpunkte
+HLS-Bauteile;SI_S2_COM_641_Tauchtemperaturfühler_QAE2112;QAE2112.010;QAE2112.010;BTAR;
+HLS-Bauteile;SI_S2_COM_641_Kanaltemperaturfühler_QAM2112;QAM2112.040;QAM2112.040;BTAZ;
