@@ -14,6 +14,11 @@ PDF-Datei erzeugt.
   Excel-/PDF-Export).
 - `dynamo/README.md` – Verdrahtung der Knoten im Dynamo-Graphen und
   Ablaufbeschreibung je Nachtrag.
+- `shared_parameters/GA_Nachtrag_SharedParameters_v2.txt` – Parameter
+  `NT_*` für den Nachtragsmodus und die Auswertung.
+- `pyrevit/` – pyRevit-Erweiterung „Nachtragsmodus“: kennzeichnet neu
+  platzierte GA-Bauteile automatisch mit Nachtragsnummer und Grund
+  (siehe `pyrevit/README.md`, Testfälle in `pyrevit/TESTANLEITUNG.md`).
 
 ## Konzept in Kürze
 
