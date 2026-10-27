@@ -8,7 +8,7 @@
         ShowInTaskbar="False">
     <StackPanel Margin="16">
         <TextBlock x:Name="info_text" TextWrapping="Wrap" Margin="0,0,0,12"
-                   Text="Alle danach neu platzierten GA-Bauteile erhalten diese Angaben automatisch." />
+                   Text="" />
 
         <TextBlock Text="Nachtragsnummer (nur Ziffern, z. B. 2)" FontWeight="SemiBold" />
         <TextBox x:Name="nummer_feld" Margin="0,4,0,12" Padding="4" />

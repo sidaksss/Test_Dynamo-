@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Aktiver Nachtrag: pro Benutzer lokal, nie im Modell.
+"""Aktive Nachträge: pro Benutzer lokal, je Projektdatei, nie im Modell.
 
-Der Zustand liegt an zwei Stellen:
+Zu jeder Projektdatei (Schlüssel siehe projekt.py) kann ein Nachtrag aktiv
+sein. Ein in Projekt A gestarteter Nachtrag wirkt nicht in Projekt B.
+
+Die Zuordnung liegt an zwei Stellen:
 1. Dauerhaft in der pyRevit-Benutzerkonfiguration (pyRevit_config.ini im
-   Benutzerprofil). So bleibt er nach einem Neustart von Revit erhalten.
+   Benutzerprofil). So bleibt sie nach einem Neustart von Revit erhalten.
 2. Zur Laufzeit im .NET-AppDomain-Speicher von Revit. Jeder pyRevit-Button
-   läuft in einer eigenen Python-Umgebung; der Updater liest den Zustand
+   läuft in einer eigenen Python-Umgebung; der Updater liest die Zuordnung
    deshalb nicht aus der Python-Konfiguration, sondern aus diesem
    gemeinsamen Speicher.
 """
@@ -13,55 +16,65 @@ Der Zustand liegt an zwei Stellen:
 from System import AppDomain
 
 from ga_nachtrag import config
-from ga_nachtrag.eingabe import Nachtrag, kodiere_nachtrag, dekodiere_nachtrag
+from ga_nachtrag.eingabe import Nachtrag, dekodiere_nachtraege, kodiere_nachtraege
+from ga_nachtrag.projekt import projektschluessel
 
-SCHLUESSEL_AKTIVER_NACHTRAG = "GA_Nachtrag.AktiverNachtrag"
+SCHLUESSEL_AKTIVE_NACHTRAEGE = "GA_Nachtrag.AktiveNachtraege"
+OPTION_AKTIVE_NACHTRAEGE = "aktive_nachtraege"
 
 
-def lies_aktiven_nachtrag():
-    """Gibt den aktiven Nachtrag zurück oder None, wenn der Modus aus ist."""
-    text = AppDomain.CurrentDomain.GetData(SCHLUESSEL_AKTIVER_NACHTRAG)
+def lies_aktiven_nachtrag(doc):
+    """Gibt den aktiven Nachtrag des Projekts zurück oder None (Modus aus)."""
+    schluessel = projektschluessel(doc)
+    if schluessel is None:
+        return None
+    return lies_alle_nachtraege().get(schluessel)
+
+
+def starte_nachtrag(doc, nummer, grund):
+    """Setzt den aktiven Nachtrag für dieses Projekt und diesen Benutzer."""
+    nachtrag = Nachtrag(nummer, grund)
+    nachtraege = lies_alle_nachtraege()
+    nachtraege[projektschluessel(doc)] = nachtrag
+    _speichere(nachtraege)
+    return nachtrag
+
+
+def beende_nachtrag(doc):
+    """Schaltet den Nachtragsmodus für dieses Projekt aus."""
+    nachtraege = lies_alle_nachtraege()
+    nachtraege.pop(projektschluessel(doc), None)
+    _speichere(nachtraege)
+
+
+def lies_alle_nachtraege():
+    """{Projektschlüssel: Nachtrag} aller Projekte mit aktivem Nachtrag."""
+    text = AppDomain.CurrentDomain.GetData(SCHLUESSEL_AKTIVE_NACHTRAEGE)
     if text is None:
         # Noch nicht geladen (z. B. Button vor dem Startskript ausgeführt)
-        return lade_nachtrag_aus_benutzerkonfiguration()
-    return dekodiere_nachtrag(text)
+        return lade_nachtraege_aus_benutzerkonfiguration()
+    return dekodiere_nachtraege(text)
 
 
-def starte_nachtrag(nummer, grund):
-    """Setzt den aktiven Nachtrag für diesen Benutzer."""
-    nachtrag = Nachtrag(nummer, grund)
-    _speichere_in_benutzerkonfiguration(nachtrag)
-    _setze_laufzeitwert(nachtrag)
-    return nachtrag
+def lade_nachtraege_aus_benutzerkonfiguration():
+    """Liest die gespeicherten Nachträge und übernimmt sie in die Laufzeit."""
+    text = _konfig_abschnitt().get_option(OPTION_AKTIVE_NACHTRAEGE, u"")
+    nachtraege = dekodiere_nachtraege(text)
+    _setze_laufzeitwert(nachtraege)
+    return nachtraege
 
 
-def beende_nachtrag():
-    """Schaltet den Nachtragsmodus für diesen Benutzer aus."""
-    _speichere_in_benutzerkonfiguration(None)
-    _setze_laufzeitwert(None)
-
-
-def lade_nachtrag_aus_benutzerkonfiguration():
-    """Liest den gespeicherten Nachtrag und übernimmt ihn in die Laufzeit."""
-    abschnitt = _konfig_abschnitt()
-    nummer = abschnitt.get_option("nummer", 0)
-    grund = abschnitt.get_option("grund", u"")
-    nachtrag = dekodiere_nachtrag(u"{}|{}".format(nummer, grund))
-    _setze_laufzeitwert(nachtrag)
-    return nachtrag
-
-
-def _setze_laufzeitwert(nachtrag):
-    AppDomain.CurrentDomain.SetData(SCHLUESSEL_AKTIVER_NACHTRAG,
-                                    kodiere_nachtrag(nachtrag))
-
-
-def _speichere_in_benutzerkonfiguration(nachtrag):
+def _speichere(nachtraege):
     from pyrevit import script
-    abschnitt = _konfig_abschnitt()
-    abschnitt.set_option("nummer", nachtrag.nummer if nachtrag else 0)
-    abschnitt.set_option("grund", nachtrag.grund if nachtrag else u"")
+    _konfig_abschnitt().set_option(OPTION_AKTIVE_NACHTRAEGE,
+                                   kodiere_nachtraege(nachtraege))
     script.save_config()
+    _setze_laufzeitwert(nachtraege)
+
+
+def _setze_laufzeitwert(nachtraege):
+    AppDomain.CurrentDomain.SetData(SCHLUESSEL_AKTIVE_NACHTRAEGE,
+                                    kodiere_nachtraege(nachtraege))
 
 
 def _konfig_abschnitt():

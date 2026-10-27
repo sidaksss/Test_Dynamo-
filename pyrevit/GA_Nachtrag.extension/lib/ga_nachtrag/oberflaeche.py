@@ -2,7 +2,9 @@
 """Anzeige des Zustands am Button "Nachtrag starten".
 
 Beschriftung, Tooltip und Symbol des Buttons zeigen, ob und welcher
-Nachtrag aktiv ist (z. B. "Nachtrag 2 aktiv").
+Nachtrag im aktiven Projekt aktiv ist (z. B. "Nachtrag 2 aktiv").
+Wechselt der Benutzer zu einem anderen Projekt, passt der Idling-Handler
+(hinweise.py) die Anzeige an.
 """
 
 import os
@@ -35,8 +37,12 @@ def aktualisiere_button(uiapp, nachtrag):
     button = finde_start_button(uiapp)
     if button is None:
         return False
-    button.ItemText = button_beschriftung(nachtrag)
-    button.ToolTip = button_tooltip(nachtrag)
+    beschriftung = button_beschriftung(nachtrag)
+    tooltip = button_tooltip(nachtrag)
+    if button.ItemText == beschriftung and button.ToolTip == tooltip:
+        return True  # Anzeige ist aktuell
+    button.ItemText = beschriftung
+    button.ToolTip = tooltip
     symbol = SYMBOL_AKTIV if nachtrag is not None else SYMBOL_INAKTIV
     if hasattr(button, "LargeImage") and os.path.exists(symbol):
         button.LargeImage = lade_symbol(symbol, 32)

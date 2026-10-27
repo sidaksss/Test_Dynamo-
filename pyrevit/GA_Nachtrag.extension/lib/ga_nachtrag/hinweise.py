@@ -10,13 +10,12 @@ Infocenter. Am Dokument wird dabei nichts verändert.
 from System import AppDomain, EventHandler
 from Autodesk.Revit.UI.Events import IdlingEventArgs
 
-from ga_nachtrag import oberflaeche, zustand
+from ga_nachtrag import oberflaeche, projekt, zustand
 
 SCHLUESSEL_LEERLAUF = "GA_Nachtrag.LeerlaufHandler"
 TITEL = u"Nachtragsmodus"
 
 _ausstehende_hinweise = []
-_button_aktualisiert = [False]
 _uiapp = [None]
 
 
@@ -45,12 +44,12 @@ def zeige_sprechblase(text):
 
 
 def bei_leerlauf(sender, args):
-    """Idling-Handler: zeigt Hinweise und setzt nach dem Laden einmalig den
-    Button-Zustand (der Button existiert erst, wenn pyRevit fertig ist)."""
+    """Idling-Handler: zeigt Hinweise und passt den Start-Button an das
+    aktive Projekt an (z. B. nach einem Wechsel zwischen Projekten)."""
     try:
-        if not _button_aktualisiert[0]:
-            _button_aktualisiert[0] = oberflaeche.aktualisiere_button(
-                _uiapp[0], zustand.lies_aktiven_nachtrag())
+        uiapp = _uiapp[0]
+        nachtrag = zustand.lies_aktiven_nachtrag(projekt.aktives_projekt(uiapp))
+        oberflaeche.aktualisiere_button(uiapp, nachtrag)
         zeige_ausstehende_hinweise()
     except Exception:
         pass  # Ein Hinweis darf Revit nie stören

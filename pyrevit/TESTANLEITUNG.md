@@ -36,6 +36,17 @@ Unit-Tests ohne Revit (Eingabeprüfung, u. a. T6):
 
 ## Zusätzliche Prüfungen
 
+- **Bindung an die Projektdatei**: Projekt A und Projekt B öffnen. In A
+  Nachtrag 2 starten. Zu B wechseln: der Button zeigt „Nachtrag starten“,
+  ein Fühler in B bleibt leer. Zurück zu A: der Button zeigt „Nachtrag 2
+  aktiv“, ein Fühler in A erhält Nummer 2. In B Nachtrag 5 starten, dann
+  in A und B je einen Fühler platzieren: A → 2, B → 5.
+- **Lokale Kopie**: Bei aktivem Nachtrag in einem Zentralmodell die lokale
+  Kopie schließen, eine neue lokale Kopie erstellen und öffnen. Der
+  Nachtrag ist weiterhin aktiv.
+- **Nie gespeichertes Projekt**: *Nachtrag starten* meldet „Bitte das
+  Projekt zuerst speichern“.
+
 - **Neustart**: Nachtrag 2 starten, Revit schließen und öffnen. Der Button
   zeigt weiterhin „Nachtrag 2 aktiv“, neue Fühler erhalten Nummer 2.
 - **Strg+Z nach Platzieren**: nimmt Bauteil und Kennzeichnung gemeinsam

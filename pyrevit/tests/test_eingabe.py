@@ -15,8 +15,9 @@ from ga_nachtrag import config  # noqa: E402
 from ga_nachtrag.eingabe import (  # noqa: E402
     Nachtrag,
     button_beschriftung,
-    dekodiere_nachtrag,
-    kodiere_nachtrag,
+    dekodiere_nachtraege,
+    kodiere_nachtraege,
+    normalisiere_projektschluessel,
     pruefe_grund,
     pruefe_nachtragsnummer,
 )
@@ -69,20 +70,40 @@ class TestGrund(unittest.TestCase):
         self.assertIsNone(pruefe_grund(u"Zeile 1\nZeile 2")[0])
 
 
-class TestKodierung(unittest.TestCase):
+class TestProjektbindung(unittest.TestCase):
 
     def test_hin_und_zurueck(self):
-        nachtrag = Nachtrag(3, u"Umplanung | Kälte")
-        self.assertEqual(dekodiere_nachtrag(kodiere_nachtrag(nachtrag)), nachtrag)
+        nachtraege = {
+            u"c:/projekte/a/zentral.rvt": Nachtrag(3, u"Umplanung | Kälte"),
+            u"c:/projekte/b/zentral.rvt": Nachtrag(5, u"Zusätzliche Fühler"),
+        }
+        self.assertEqual(dekodiere_nachtraege(kodiere_nachtraege(nachtraege)),
+                         nachtraege)
 
-    def test_kein_nachtrag(self):
-        self.assertEqual(kodiere_nachtrag(None), u"")
-        self.assertIsNone(dekodiere_nachtrag(u""))
-        self.assertIsNone(dekodiere_nachtrag(None))
+    def test_leer(self):
+        self.assertEqual(kodiere_nachtraege({}), u"{}")
+        self.assertEqual(dekodiere_nachtraege(u""), {})
+        self.assertEqual(dekodiere_nachtraege(None), {})
+        self.assertEqual(dekodiere_nachtraege(u"kein json"), {})
 
-    def test_gespeicherter_aus_zustand(self):
-        # So steht ein beendeter Nachtrag in der Benutzerkonfiguration
-        self.assertIsNone(dekodiere_nachtrag(u"0|"))
+    def test_bereits_als_dict_gelesen(self):
+        # pyRevit liefert JSON-Texte aus der Konfiguration ggf. schon als dict
+        self.assertEqual(dekodiere_nachtraege({u"x": {u"nummer": 2, u"grund": u"g"}}),
+                         {u"x": Nachtrag(2, u"g")})
+
+    def test_ungueltige_eintraege_entfallen(self):
+        text = (u'{"a": {"nummer": 0, "grund": "g"}, "b": {"nummer": 2, "grund": ""},'
+                u' "c": "kaputt", "d": {"nummer": 4, "grund": "ok"}}')
+        self.assertEqual(dekodiere_nachtraege(text), {u"d": Nachtrag(4, u"ok")})
+
+    def test_projektschluessel(self):
+        self.assertEqual(
+            normalisiere_projektschluessel(u"\\\\Server\\GA\\Zentral.RVT"),
+            u"//server/ga/zentral.rvt")
+        self.assertEqual(normalisiere_projektschluessel(u"C:\\Projekte\\A.rvt"),
+                         normalisiere_projektschluessel(u"c:/projekte/a.rvt"))
+        self.assertIsNone(normalisiere_projektschluessel(u""))
+        self.assertIsNone(normalisiere_projektschluessel(None))
 
     def test_button_beschriftung(self):
         self.assertEqual(button_beschriftung(Nachtrag(2, u"x")),

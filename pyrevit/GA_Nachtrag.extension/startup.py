@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Wird von pyRevit beim Start von Revit und bei "Reload" ausgeführt.
 
-1. Aktiven Nachtrag aus der Benutzerkonfiguration laden.
+1. Aktive Nachträge (je Projektdatei) aus der Benutzerkonfiguration laden.
 2. Dynamic Model Updater registrieren (optional, für alle Dokumente).
 3. Idling-Handler für Hinweise und Button-Zustand anmelden.
 """
@@ -20,7 +20,7 @@ from ga_nachtrag import hinweise, updater, zustand
 logger = script.get_logger()
 
 try:
-    zustand.lade_nachtrag_aus_benutzerkonfiguration()
+    zustand.lade_nachtraege_aus_benutzerkonfiguration()
 except Exception as fehler:
     logger.error(u"Nachtragsmodus: Benutzerkonfiguration nicht lesbar: {}"
                  .format(fehler))

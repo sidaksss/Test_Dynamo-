@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """Nachtrag starten: Nachtragsnummer und Grund abfragen und für diesen
-Benutzer aktivieren. Danach platzierte GA-Bauteile werden gekennzeichnet."""
+Benutzer im aktiven Projekt aktivieren. Danach in diesem Projekt platzierte
+GA-Bauteile werden gekennzeichnet."""
 
 from System.Windows import Visibility
 
 from pyrevit import HOST_APP, forms, script
 
 from ga_nachtrag import oberflaeche, updater, zustand
+from ga_nachtrag.projekt import aktives_projekt, projektschluessel
 from ga_nachtrag.eingabe import pruefe_grund, pruefe_nachtragsnummer
 from ga_nachtrag.parameter import pruefe_projektparameter
 
@@ -14,15 +16,19 @@ from ga_nachtrag.parameter import pruefe_projektparameter
 class NachtragDialog(forms.WPFWindow):
     """Dialog mit den Feldern Nachtragsnummer und Grund."""
 
-    def __init__(self, xaml_datei, bisheriger_nachtrag):
+    def __init__(self, xaml_datei, projektname, bisheriger_nachtrag):
         forms.WPFWindow.__init__(self, xaml_datei)
         self.ergebnis = None
+        self.info_text.Text = (
+            u"Projekt: {}\nAlle danach in diesem Projekt neu platzierten "
+            u"GA-Bauteile erhalten diese Angaben automatisch."
+            .format(projektname))
         if bisheriger_nachtrag is not None:
             self.Title = u"Nachtrag wechseln"
             self.info_text.Text = (
-                u"Aktiv ist Nachtrag {}. Neue Angaben gelten für alle "
-                u"danach platzierten GA-Bauteile.".format(
-                    bisheriger_nachtrag.nummer))
+                u"Projekt: {}\nAktiv ist Nachtrag {}. Neue Angaben gelten "
+                u"für alle danach platzierten GA-Bauteile.".format(
+                    projektname, bisheriger_nachtrag.nummer))
             self.nummer_feld.Text = str(bisheriger_nachtrag.nummer)
             self.grund_feld.Text = bisheriger_nachtrag.grund
         self.nummer_feld.Focus()
@@ -43,14 +49,6 @@ class NachtragDialog(forms.WPFWindow):
     def zeige_fehler(self, text):
         self.fehler_text.Text = text
         self.fehler_text.Visibility = Visibility.Visible
-
-
-def hole_aktives_projekt():
-    """Gibt das aktive Projekt zurück oder None (keins offen / Familie)."""
-    uidoc = HOST_APP.uiapp.ActiveUIDocument
-    if uidoc is None or uidoc.Document.IsFamilyDocument:
-        return None
-    return uidoc.Document
 
 
 def pruefe_voraussetzungen(doc):
@@ -80,31 +78,40 @@ def pruefe_voraussetzungen(doc):
     return True
 
 
-def frage_nachtrag_ab(bisheriger_nachtrag):
+def frage_nachtrag_ab(doc, bisheriger_nachtrag):
     """Zeigt den Dialog. Rückgabe (nummer, grund) oder None bei Abbruch."""
     dialog = NachtragDialog(script.get_bundle_file("NachtragDialog.xaml"),
-                            bisheriger_nachtrag)
+                            doc.Title, bisheriger_nachtrag)
     dialog.ShowDialog()
     return dialog.ergebnis
 
 
 def main():
-    doc = hole_aktives_projekt()
+    doc = aktives_projekt(HOST_APP.uiapp)
     if doc is None:
         forms.alert(u"Bitte zuerst ein Projekt öffnen.", title=u"Nachtragsmodus")
         return
+    if projektschluessel(doc) is None:
+        forms.alert(u"Bitte das Projekt zuerst speichern.",
+                    sub_msg=u"Der Nachtrag wird an die Projektdatei gebunden. "
+                            u"Ein nie gespeichertes Projekt hat noch keine.",
+                    title=u"Nachtragsmodus")
+        return
     if not pruefe_voraussetzungen(doc):
         return
-    eingabe = frage_nachtrag_ab(zustand.lies_aktiven_nachtrag())
+    eingabe = frage_nachtrag_ab(doc, zustand.lies_aktiven_nachtrag(doc))
     if eingabe is None:
         return
-    nachtrag = zustand.starte_nachtrag(*eingabe)
+    nummer, grund = eingabe
+    nachtrag = zustand.starte_nachtrag(doc, nummer, grund)
     oberflaeche.aktualisiere_button(HOST_APP.uiapp, nachtrag)
     forms.alert(
-        u"Nachtrag {} ist aktiv.".format(nachtrag.nummer),
-        sub_msg=u"Grund: {}\n\nAlle ab jetzt von Ihnen platzierten GA-Bauteile "
-                u"erhalten diese Angaben. Die Einstellung gilt nur für Sie, "
-                u"nicht für Kollegen im selben Modell.".format(nachtrag.grund),
+        u"Nachtrag {} ist im Projekt '{}' aktiv.".format(nachtrag.nummer,
+                                                         doc.Title),
+        sub_msg=u"Grund: {}\n\nAlle ab jetzt von Ihnen in diesem Projekt "
+                u"platzierten GA-Bauteile erhalten diese Angaben. Andere "
+                u"Projekte und Kollegen im selben Modell sind nicht "
+                u"betroffen.".format(nachtrag.grund),
         title=u"Nachtragsmodus")
 
 

@@ -70,7 +70,7 @@ class NachtragsUpdater(IUpdater):
                 u"gekennzeichnet: {}".format(fehler))
 
     def verarbeite_neue_bauteile(self, doc, neue_ids):
-        nachtrag = zustand.lies_aktiven_nachtrag()
+        nachtrag = zustand.lies_aktiven_nachtrag(doc)
         ergebnis = kennzeichne_bauteile(doc, neue_ids, nachtrag)
         self.melde_ergebnis(doc, nachtrag, ergebnis)
 

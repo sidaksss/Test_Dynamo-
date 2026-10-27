@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Prüfung der Benutzereingaben und Darstellung des aktiven Nachtrags.
+"""Prüfung der Benutzereingaben, Speicherformat und Darstellung der
+aktiven Nachträge.
 
 Dieses Modul nutzt bewusst keine Revit-API, damit es auch außerhalb von
 Revit getestet werden kann (siehe pyrevit/tests).
 """
 
+import json
 import re
 
 from ga_nachtrag import config
@@ -71,27 +73,52 @@ def pruefe_grund(text):
     return grund, None
 
 
-def kodiere_nachtrag(nachtrag):
-    """Wandelt den Nachtrag in einen Text "nummer|grund" um.
+def normalisiere_projektschluessel(pfad):
+    """Vereinheitlicht einen Dateipfad zum Schlüssel einer Projektdatei.
 
-    So kann er zwischen den pyRevit-Skripten und dem Updater
-    ausgetauscht werden. Kein Nachtrag -> leerer Text.
+    Windows-Pfade sind nicht von Groß-/Kleinschreibung abhängig, deshalb
+    wird alles klein geschrieben und "\\" durch "/" ersetzt.
+    Leerer Pfad (Projekt nie gespeichert) -> None.
     """
-    if nachtrag is None:
-        return u""
-    return u"{}|{}".format(nachtrag.nummer, nachtrag.grund)
+    pfad = (pfad or u"").strip()
+    if not pfad:
+        return None
+    return pfad.replace(u"\\", u"/").lower()
 
 
-def dekodiere_nachtrag(text):
-    """Gegenstück zu kodiere_nachtrag. Ungültiger Text -> None."""
-    if not text or u"|" not in text:
-        return None
-    nummer_text, grund = text.split(u"|", 1)
-    nummer, fehler_nummer = pruefe_nachtragsnummer(nummer_text)
-    grund, fehler_grund = pruefe_grund(grund)
-    if fehler_nummer or fehler_grund:
-        return None
-    return Nachtrag(nummer, grund)
+def kodiere_nachtraege(nachtraege):
+    """Wandelt {Projektschlüssel: Nachtrag} in einen JSON-Text um.
+
+    So werden die aktiven Nachträge gespeichert und zwischen den
+    pyRevit-Skripten und dem Updater ausgetauscht.
+    """
+    daten = {}
+    for schluessel, nachtrag in nachtraege.items():
+        daten[schluessel] = {"nummer": nachtrag.nummer, "grund": nachtrag.grund}
+    return json.dumps(daten, sort_keys=True)
+
+
+def dekodiere_nachtraege(text):
+    """Gegenstück zu kodiere_nachtraege. Ungültige Einträge entfallen."""
+    if isinstance(text, dict):
+        daten = text
+    else:
+        try:
+            daten = json.loads(text) if text else {}
+        except ValueError:
+            return {}
+    if not isinstance(daten, dict):
+        return {}
+    nachtraege = {}
+    for schluessel, eintrag in daten.items():
+        if not isinstance(eintrag, dict):
+            continue
+        nummer, fehler_nummer = pruefe_nachtragsnummer(
+            u"{}".format(eintrag.get("nummer", u"")))
+        grund, fehler_grund = pruefe_grund(eintrag.get("grund"))
+        if fehler_nummer is None and fehler_grund is None:
+            nachtraege[schluessel] = Nachtrag(nummer, grund)
+    return nachtraege
 
 
 def button_beschriftung(nachtrag):
@@ -104,9 +131,10 @@ def button_beschriftung(nachtrag):
 def button_tooltip(nachtrag):
     """Tooltip des Start-Buttons, abhängig vom Zustand."""
     if nachtrag is None:
-        return (u"Kein Nachtrag aktiv. Neu platzierte GA-Bauteile gelten als "
-                u"möglicher Vertragsstand.\nKlicken, um einen Nachtrag zu "
-                u"starten.")
-    return (u"Aktiv: Nachtrag {}\nGrund: {}\nNeu platzierte GA-Bauteile "
-            u"werden diesem Nachtrag zugeordnet.\nKlicken, um den Nachtrag "
-            u"zu wechseln.".format(nachtrag.nummer, nachtrag.grund))
+        return (u"In diesem Projekt ist kein Nachtrag aktiv. Neu platzierte "
+                u"GA-Bauteile gelten als möglicher Vertragsstand.\nKlicken, "
+                u"um einen Nachtrag zu starten.")
+    return (u"In diesem Projekt aktiv: Nachtrag {}\nGrund: {}\nNeu "
+            u"platzierte GA-Bauteile werden diesem Nachtrag zugeordnet."
+            u"\nKlicken, um den Nachtrag zu wechseln."
+            .format(nachtrag.nummer, nachtrag.grund))

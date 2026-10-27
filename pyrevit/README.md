@@ -27,8 +27,8 @@ Die Kategorienliste und weitere Einstellungen stehen in
 
 | Button | Wirkung |
 |---|---|
-| **Nachtrag starten** | Dialog: Nachtragsnummer (nur Ziffern, > 0) und Grund (Pflicht, max. 100 Zeichen). Prüft vorher die Projektparameter. Danach zeigt der Button „Nachtrag 2 aktiv“, ein grünes Symbol und im Tooltip den Grund. Erneutes Klicken wechselt den Nachtrag. |
-| **Nachtrag beenden** | Schaltet den Modus aus. Der Button zeigt wieder „Nachtrag starten“. |
+| **Nachtrag starten** | Dialog: Nachtragsnummer (nur Ziffern, > 0) und Grund (Pflicht, max. 100 Zeichen). Prüft vorher die Projektparameter. Der Nachtrag gilt nur für das **aktive Projekt**. Danach zeigt der Button „Nachtrag 2 aktiv“, ein grünes Symbol und im Tooltip den Grund. Erneutes Klicken wechselt den Nachtrag. |
+| **Nachtrag beenden** | Schaltet den Modus im aktiven Projekt aus. Der Button zeigt wieder „Nachtrag starten“. |
 
 Automatisch im Hintergrund:
 
@@ -41,10 +41,25 @@ Automatisch im Hintergrund:
   „Bauteile nicht löschen, sondern als entfallen markieren. Rückgängig mit
   Strg+Z.“ Am Modell wird dabei nichts verändert.
 
-Der aktive Nachtrag gilt **nur für den eigenen Benutzer** und wird in der
-pyRevit-Benutzerkonfiguration (`%APPDATA%\pyRevit\pyRevit_config.ini`,
-Abschnitt `GA_Nachtrag`) gespeichert, nicht im Modell. Er bleibt nach einem
-Neustart von Revit aktiv, der Button zeigt das an.
+Der aktive Nachtrag gilt **nur für den eigenen Benutzer** und ist an die
+**Projektdatei** gebunden, in der er gestartet wurde:
+
+- Jedes Projekt hat seinen eigenen Zustand. Nachtrag 2 in Projekt A und
+  Nachtrag 5 in Projekt B können gleichzeitig aktiv sein. In einem Projekt
+  ohne gestarteten Nachtrag ist der Modus aus.
+- Erkannt wird die Projektdatei im Worksharing am Pfad des
+  **Zentralmodells**. Eine neu erstellte lokale Kopie gehört also zum selben
+  Projekt. Ohne Worksharing zählt der Dateipfad, bei Cloud-Modellen der
+  Cloud-Pfad.
+- Der Button zeigt immer den Zustand des gerade aktiven Projekts und
+  wechselt beim Umschalten zwischen offenen Projekten mit.
+- Ein nie gespeichertes Projekt hat noch keine Datei; dort lässt sich kein
+  Nachtrag starten.
+
+Gespeichert wird in der pyRevit-Benutzerkonfiguration
+(`%APPDATA%\pyRevit\pyRevit_config.ini`, Abschnitt `GA_Nachtrag`, Option
+`aktive_nachtraege`), nicht im Modell. Der Zustand bleibt nach einem
+Neustart von Revit erhalten.
 
 Strg+Z nach dem Platzieren nimmt Bauteil und Kennzeichnung gemeinsam zurück,
 weil der Updater in derselben Transaktion schreibt.
@@ -58,6 +73,7 @@ pyrevit/
 │   ├── lib/ga_nachtrag/
 │   │   ├── config.py                  GA-Kategorien, GUIDs, Einstellungen
 │   │   ├── eingabe.py                 Eingabeprüfung (ohne Revit testbar)
+│   │   ├── projekt.py                 projektschluessel (Bindung an Projektdatei)
 │   │   ├── zustand.py                 lies_aktiven_nachtrag, starte/beende_nachtrag
 │   │   ├── parameter.py               pruefe_projektparameter, Parameterzugriff
 │   │   ├── kennzeichnung.py           kennzeichne_bauteile
@@ -96,7 +112,8 @@ pyrevit/
 - **Schreiben**: nur `NT_Nachtragsnummer` und `NT_Grund` (über die GUID
   gesucht), nur innerhalb der laufenden Transaktion des Updaters. Kein
   Löschen, keine Änderung an Geometrie, Typen oder anderen Parametern.
-- **Zustand**: Die Buttons schreiben in die pyRevit-Benutzerkonfiguration
+- **Zustand**: Gespeichert wird eine Zuordnung Projektdatei → Nachtrag
+  (JSON). Die Buttons schreiben in die pyRevit-Benutzerkonfiguration
   und zusätzlich in den AppDomain-Speicher von Revit. Der Updater liest aus
   dem AppDomain-Speicher, weil jeder pyRevit-Button in einer eigenen
   Python-Umgebung läuft.
@@ -116,8 +133,9 @@ pyrevit/
 - Erkannt wird nur das **Hinzufügen** von Bauteilen. Typwechsel oder
   Parameteränderungen an bestehenden Bauteilen werden nicht gekennzeichnet
   (geplant: Stufe 2 „Bauteil zuordnen“).
-- Der aktive Nachtrag gilt für **alle geöffneten Projekte** des Benutzers.
-  Wer zwei Projekte gleichzeitig offen hat, kennzeichnet in beiden.
+- Wird ein Projekt unter neuem Namen oder Pfad gespeichert, verschoben oder
+  als neues Zentralmodell abgelegt, gilt es als andere Projektdatei. Der
+  Nachtrag muss dort neu gestartet werden.
 - Laufen zwei Revit-Sitzungen gleichzeitig, wirkt Starten oder Beenden nur in
   der Sitzung, in der geklickt wurde. Die andere übernimmt den Stand erst
   nach Neustart oder Reload.
