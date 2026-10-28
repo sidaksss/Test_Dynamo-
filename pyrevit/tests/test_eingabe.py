@@ -4,6 +4,7 @@
 Ausführen im Ordner pyrevit:  python -m unittest discover tests
 """
 
+import json
 import os
 import sys
 import unittest
@@ -79,6 +80,19 @@ class TestProjektbindung(unittest.TestCase):
         }
         self.assertEqual(dekodiere_nachtraege(kodiere_nachtraege(nachtraege)),
                          nachtraege)
+
+    def test_umlaute_nur_ascii_gespeichert(self):
+        # Fehler aus Revit: "'unknown' codec can't decode byte 0xc4 in
+        # position 3" bei einem "Ä" an Stelle 3. Der gespeicherte Text muss
+        # deshalb reines ASCII sein und trotzdem alles zurückliefern.
+        nachtraege = {
+            u"c:/projekte/änderungen/a.rvt": Nachtrag(2, u"GA Änderung Fühler"),
+            u"c:/b.rvt": Nachtrag(7, u'Zitat "x" \\ Pfad, Größe \U0001F600'),
+        }
+        text = kodiere_nachtraege(nachtraege)
+        text.encode("ascii")  # wirft einen Fehler, falls nicht ASCII
+        self.assertEqual(dekodiere_nachtraege(text), nachtraege)
+        self.assertEqual(json.loads(text)[u"c:/b.rvt"][u"nummer"], 7)
 
     def test_leer(self):
         self.assertEqual(kodiere_nachtraege({}), u"{}")

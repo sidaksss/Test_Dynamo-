@@ -92,10 +92,36 @@ def kodiere_nachtraege(nachtraege):
     So werden die aktiven Nachträge gespeichert und zwischen den
     pyRevit-Skripten und dem Updater ausgetauscht.
     """
-    daten = {}
-    for schluessel, nachtrag in nachtraege.items():
-        daten[schluessel] = {"nummer": nachtrag.nummer, "grund": nachtrag.grund}
-    return json.dumps(daten, sort_keys=True)
+    # Bewusst ohne json.dumps: In IronPython 2.7 scheitert json.dumps an
+    # Umlauten ("'unknown' codec can't decode byte 0xc4"). Der Text wird
+    # deshalb selbst erzeugt und enthält nur ASCII-Zeichen (Umlaute als
+    # \u00e4 usw.). json.loads liest ihn wieder korrekt ein.
+    eintraege = []
+    for schluessel in sorted(nachtraege):
+        nachtrag = nachtraege[schluessel]
+        eintraege.append(u'{}: {{"grund": {}, "nummer": {}}}'.format(
+            _als_json_text(schluessel), _als_json_text(nachtrag.grund),
+            int(nachtrag.nummer)))
+    return u"{" + u", ".join(eintraege) + u"}"
+
+
+def _als_json_text(text):
+    """Schreibt einen Text als JSON-Zeichenkette, nur mit ASCII-Zeichen."""
+    teile = []
+    for zeichen in text:
+        code = ord(zeichen)
+        if zeichen == u'"' or zeichen == u"\\":
+            teile.append(u"\\" + zeichen)
+        elif 0x20 <= code < 0x7f:
+            teile.append(zeichen)
+        elif code > 0xFFFF:
+            # Zeichen außerhalb der Basisebene (z. B. Emoji) als Ersatzpaar
+            code -= 0x10000
+            teile.append(u"\\u{:04x}\\u{:04x}".format(
+                0xD800 + (code >> 10), 0xDC00 + (code & 0x3FF)))
+        else:
+            teile.append(u"\\u{:04x}".format(code))
+    return u'"' + u"".join(teile) + u'"'
 
 
 def dekodiere_nachtraege(text):
