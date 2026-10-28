@@ -18,6 +18,27 @@ LV importiert befüllt, bevor der Graph läuft.
 
 ## Knotenkette
 
+0a. **`00a_list_unique_geraetebezeichnungen.py`** *(eigenständiges Hilfsskript,
+    nicht Teil der Nachtrags-Pipeline)*
+   Durchsucht eine Elementliste über das **gesamte Projekt** (keine
+   View-Einschränkung) und liefert eine **duplikatfreie, alphabetisch
+   sortierte Liste** der Werte aus dem Parameter `GERAETEBEZEICHNUNG`; ist
+   dieser bei einem Element leer, wird ersatzweise `Modell` verwendet
+   (Fallback). Beide Parameter werden sowohl auf der Instanz als auch auf
+   dem Elementtyp gesucht, da `Modell` bei vielen Familien ein
+   Typparameter ist. Gedacht als Ausgangsliste für eine eigene
+   (Dummy-)Datenbank, z. B. als Vorstufe zur LV-Zuordnung.
+   - **Auswahl** – OOTB-Nodes `Categories` (Mehrfachauswahl der
+     gewünschten GA-Kategorien) + `All Elements of Category`, zu einer
+     flachen Liste zusammengeführt (`List.Flatten`) → Python-Node **IN[0]**.
+   - Input: `elements`, optional `primary_param_name` (String Input,
+     Default `GERAETEBEZEICHNUNG`), `fallback_param_name` (String Input,
+     Default `Modell`).
+   - Output: `[unique_values, skipped]` – `unique_values` ist die fertige
+     Liste (z. B. an `Watch` oder `Data.ExportExcel` anschließen),
+     `skipped` listet die Element-IDs, bei denen beide Parameter leer
+     waren (zur Vollständigkeitskontrolle).
+
 0. **`00_lv_zuordnung_by_typ.py`** *(optionaler Vorlauf-Schritt)*
    Ordnet Bauteilen der **aktiven Ansicht** anhand des Shared Parameters
    `Typ` (z. B. `QMX2.P33`) automatisch die passende `LV Nummer` aus einer
