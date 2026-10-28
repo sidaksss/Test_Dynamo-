@@ -147,7 +147,9 @@ pyrevit/
   Nachtragsbauteilen behalten die Werte des Originals.
 - Beim Leeren nutzt die Erweiterung `Parameter.ClearValue()`, sofern die
   Revit-API die Methode anbietet. Sonst wird `NT_Nachtragsnummer = 0`
-  geschrieben. Die Auswertung muss „leer“ und „0“ gleich behandeln.
+  geschrieben. „Kein Nachtrag“ ist also leer oder 0 (so abgestimmt).
+  Regel für Bauteillisten, Filter und Dynamo: **NT_Nachtragsnummer > 0 =
+  gehört zu einem Nachtrag**. Dynamo liest ein leeres Feld ohnehin als 0.
 - Beim Platzieren von **Modellgruppen** werden auch die enthaltenen
   GA-Bauteile gekennzeichnet. Dafür sollte bei den Projektparametern
   „Werte können je nach Gruppeninstanz variieren“ aktiv sein.
