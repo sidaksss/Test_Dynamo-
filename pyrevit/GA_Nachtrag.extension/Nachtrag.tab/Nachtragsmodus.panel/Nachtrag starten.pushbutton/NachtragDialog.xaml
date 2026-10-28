@@ -17,7 +17,7 @@
         <TextBox x:Name="grund_feld" Margin="0,4,0,8" Padding="4" AcceptsReturn="False" />
 
         <TextBlock x:Name="fehler_text" Foreground="#B00020" TextWrapping="Wrap"
-                   Margin="0,0,0,8" Visibility="Collapsed" />
+                   Margin="0,0,0,4" Text="" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
             <Button x:Name="starten_button" Content="Starten" Width="100" Margin="0,0,8,0"

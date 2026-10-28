@@ -3,10 +3,6 @@
 Benutzer im aktiven Projekt aktivieren. Danach in diesem Projekt platzierte
 GA-Bauteile werden gekennzeichnet."""
 
-import clr
-clr.AddReference("PresentationFramework")  # WPF, nötig für System.Windows
-from System.Windows import Visibility
-
 from pyrevit import HOST_APP, forms, script
 
 from ga_nachtrag import oberflaeche, updater, zustand
@@ -49,8 +45,8 @@ class NachtragDialog(forms.WPFWindow):
         self.Close()
 
     def zeige_fehler(self, text):
+        # Das Textfeld ist immer da, aber leer, solange kein Fehler vorliegt
         self.fehler_text.Text = text
-        self.fehler_text.Visibility = Visibility.Visible
 
 
 def pruefe_voraussetzungen(doc):

@@ -10,12 +10,6 @@ Wechselt der Benutzer zu einem anderen Projekt, passt der Idling-Handler
 import os
 import re
 
-import clr
-clr.AddReference("WindowsBase")         # WPF-Grundlagen
-clr.AddReference("PresentationCore")    # Bilder für das Button-Symbol
-from System import Uri
-from System.Windows.Media.Imaging import BitmapCacheOption, BitmapImage
-
 from ga_nachtrag import config
 from ga_nachtrag.eingabe import button_beschriftung, button_tooltip
 
@@ -46,7 +40,10 @@ def aktualisiere_button(uiapp, nachtrag):
     button.ToolTip = tooltip
     symbol = SYMBOL_AKTIV if nachtrag is not None else SYMBOL_INAKTIV
     if hasattr(button, "LargeImage") and os.path.exists(symbol):
-        button.LargeImage = lade_symbol(symbol, 32)
+        try:
+            button.LargeImage = lade_symbol(symbol, 32)
+        except Exception:
+            pass  # Ohne Symbol zeigt die Beschriftung den Zustand trotzdem
     return True
 
 
@@ -64,6 +61,14 @@ def finde_start_button(uiapp):
 
 
 def lade_symbol(pfad, groesse):
+    """Lädt eine PNG-Datei als Bild für den Revit-Button."""
+    # WPF-Bibliotheken erst hier laden, damit ein Fehler dabei nie den
+    # ganzen Nachtragsmodus verhindert.
+    import clr
+    clr.AddReference("WindowsBase")
+    clr.AddReference("PresentationCore")
+    from System import Uri
+    from System.Windows.Media.Imaging import BitmapCacheOption, BitmapImage
     bild = BitmapImage()
     bild.BeginInit()
     bild.UriSource = Uri(pfad)
