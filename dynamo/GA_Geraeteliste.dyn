@@ -1,0 +1,148 @@
+{
+  "Uuid": "c0a6d72f-22eb-4e90-ada4-65872d9baf3a",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "GA_Geraeteliste",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7c1b06d2-aec2-4d14-8600-91a81db40b14",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": false,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.19.0.6251",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "580f28b8-8d5f-4a19-a40e-d9c0cdc13e01",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 300.0,
+        "Y": 200.0
+      },
+      {
+        "Id": "2f355449-6fde-44c1-bba1-0c6569d3445c",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 650.0,
+        "Y": 200.0
+      }
+    ],
+    "Annotations": [],
+    "X": 0.0,
+    "Y": 0.0,
+    "Zoom": 1.0
+  },
+  "Nodes": [
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "InputCount": 0,
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "bf54427e-fa6e-426f-aa52-a7d9fd5e1dd2",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Id": "580f28b8-8d5f-4a19-a40e-d9c0cdc13e01",
+      "Name": "Python Script",
+      "Description": "Runs an embedded Python script.",
+      "IsVisible": true,
+      "IsUpstreamVisible": true,
+      "Excluded": false,
+      "ShowGeometry": true,
+      "Engine": "IronPython2",
+      "EngineName": "IronPython2",
+      "VariableInputPorts": true,
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"Dynamo Python Script node (eigenstaendig, keine weiteren Nodes noetig):\ndurchsucht das gesamte aktuelle Revit-Projekt nach Elementen, die den\nParameter 'GERAETEBEZEICHNUNG' oder 'Modell' besitzen (Instanz- oder\nTypparameter), liest bevorzugt 'GERAETEBEZEICHNUNG', sonst 'Modell', und\nliefert eine duplikatfreie, alphabetisch sortierte Liste der gefundenen\nWerte. Elemente mit einem der beiden Parameter, aber ohne Wert, werden\nseparat als 'skipped' (Element-ID) ausgegeben; Elemente ohne beide\nParameter werden ignoriert (so bleibt die Liste auf GA-relevante\nBauteile beschraenkt, ohne dass Kategorien manuell ausgewaehlt werden\nmuessen).\n\nCompatible with IronPython2 and CPython3 (no f-strings, no walrus).\"\"\"\n\nimport clr\nclr.AddReference('RevitAPI')\nclr.AddReference('RevitServices')\nfrom RevitServices.Persistence import DocumentManager\nfrom Autodesk.Revit.DB import FilteredElementCollector, ElementId\n\ndoc = DocumentManager.Instance.CurrentDBDocument\n\nPRIMARY_PARAM = 'GERAETEBEZEICHNUNG'\nFALLBACK_PARAM = 'Modell'\n\n\ndef get_type(element):\n\ttype_id = element.GetTypeId()\n\tif type_id is None or type_id == ElementId.InvalidElementId:\n\t\treturn None\n\treturn doc.GetElement(type_id)\n\n\ndef find_param(element, name):\n\tp = element.LookupParameter(name)\n\tif p is not None:\n\t\treturn p\n\tel_type = get_type(element)\n\tif el_type is not None:\n\t\treturn el_type.LookupParameter(name)\n\treturn None\n\n\ndef param_value(param):\n\tif param is None or not param.HasValue:\n\t\treturn None\n\tval = param.AsString()\n\tif not val:\n\t\tval = param.AsValueString()\n\treturn val.strip() if val else None\n\n\nseen = set()\nunique_values = []\nskipped = []\n\ncollector = FilteredElementCollector(doc).WhereElementIsNotElementType()\n\nfor el in collector:\n\tif el is None:\n\t\tcontinue\n\n\tprimary_param = find_param(el, PRIMARY_PARAM)\n\tfallback_param = find_param(el, FALLBACK_PARAM)\n\tif primary_param is None and fallback_param is None:\n\t\tcontinue\n\n\tvalue = param_value(primary_param)\n\tif not value:\n\t\tvalue = param_value(fallback_param)\n\n\tif not value:\n\t\tskipped.append(el.Id.IntegerValue)\n\t\tcontinue\n\n\tif value not in seen:\n\t\tseen.add(value)\n\t\tunique_values.append(value)\n\nunique_values.sort()\n\nOUT = [unique_values, skipped]\n"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchIcon": false,
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "82bb430d-a6ca-4e01-8a86-28136343e92a",
+          "Name": "",
+          "Description": "Node input.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "a59adb0d-5047-4dab-9ee5-17392d6ac466",
+          "Name": "",
+          "Description": "Node output.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Id": "2f355449-6fde-44c1-bba1-0c6569d3445c",
+      "Name": "Watch",
+      "Description": "Visualize the output of node.",
+      "IsVisible": true,
+      "IsUpstreamVisible": true,
+      "Excluded": false,
+      "ShowGeometry": true,
+      "Replication": "Disabled"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "bf54427e-fa6e-426f-aa52-a7d9fd5e1dd2",
+      "End": "82bb430d-a6ca-4e01-8a86-28136343e92a",
+      "Id": "dff74f37-c3f1-426b-a8bc-02d4c6d49fcc",
+      "IsHidden": false
+    }
+  ],
+  "Category": ""
+}

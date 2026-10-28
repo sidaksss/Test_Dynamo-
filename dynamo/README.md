@@ -18,26 +18,26 @@ LV importiert befüllt, bevor der Graph läuft.
 
 ## Knotenkette
 
-0a. **`00a_list_unique_geraetebezeichnungen.py`** *(eigenständiges Hilfsskript,
-    nicht Teil der Nachtrags-Pipeline)*
-   Durchsucht eine Elementliste über das **gesamte Projekt** (keine
-   View-Einschränkung) und liefert eine **duplikatfreie, alphabetisch
-   sortierte Liste** der Werte aus dem Parameter `GERAETEBEZEICHNUNG`; ist
-   dieser bei einem Element leer, wird ersatzweise `Modell` verwendet
-   (Fallback). Beide Parameter werden sowohl auf der Instanz als auch auf
-   dem Elementtyp gesucht, da `Modell` bei vielen Familien ein
-   Typparameter ist. Gedacht als Ausgangsliste für eine eigene
-   (Dummy-)Datenbank, z. B. als Vorstufe zur LV-Zuordnung.
-   - **Auswahl** – OOTB-Nodes `Categories` (Mehrfachauswahl der
-     gewünschten GA-Kategorien) + `All Elements of Category`, zu einer
-     flachen Liste zusammengeführt (`List.Flatten`) → Python-Node **IN[0]**.
-   - Input: `elements`, optional `primary_param_name` (String Input,
-     Default `GERAETEBEZEICHNUNG`), `fallback_param_name` (String Input,
-     Default `Modell`).
+0a. **`00a_list_unique_geraetebezeichnungen.py`** *(eigenständiges
+    Hilfsskript, nicht Teil der Nachtrags-Pipeline)* – fertig verdrahtet
+    in **`dynamo/GA_Geraeteliste.dyn`**, einfach öffnen und ausführen.
+   Durchsucht **ohne weitere Auswahl-Nodes** das gesamte aktuelle Projekt
+   (`FilteredElementCollector(doc)`, keine View- oder Kategorie-
+   Einschränkung nötig) nach Elementen, die den Parameter
+   `GERAETEBEZEICHNUNG` oder `Modell` besitzen (Instanz- oder
+   Typparameter – `Modell` ist bei vielen Familien ein Typparameter).
+   Bevorzugt wird `GERAETEBEZEICHNUNG` gelesen, ist das Feld leer,
+   ersatzweise `Modell`. Elemente ohne beide Parameter werden ignoriert
+   (dadurch bleibt die Liste implizit auf GA-relevante Bauteile
+   beschränkt, ohne dass Kategorien manuell gewählt werden müssen).
+   Ergebnis: eine **duplikatfreie, alphabetisch sortierte Liste** der
+   gefundenen Werte – Ausgangsbasis für eine eigene (Dummy-)Datenbank.
+   - Knoten: nur **1× Python Script** (der Code aus der `.py`-Datei) →
+     **1× Watch** zur Anzeige. Keine Inputs nötig.
    - Output: `[unique_values, skipped]` – `unique_values` ist die fertige
-     Liste (z. B. an `Watch` oder `Data.ExportExcel` anschließen),
-     `skipped` listet die Element-IDs, bei denen beide Parameter leer
-     waren (zur Vollständigkeitskontrolle).
+     Liste, `skipped` listet die Element-IDs, bei denen zwar einer der
+     beiden Parameter existiert, aber kein Wert eingetragen ist (zur
+     Vollständigkeitskontrolle).
 
 0. **`00_lv_zuordnung_by_typ.py`** *(optionaler Vorlauf-Schritt)*
    Ordnet Bauteilen der **aktiven Ansicht** anhand des Shared Parameters

@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Dynamo Python Script node: durchsucht eine vorgegebene Elementliste
-(typischerweise ueber OOTB 'Categories' + 'All Elements of Category' fuer
-die gewuenschten GA-Kategorien zusammengestellt, ohne View-Einschraenkung,
-also das ganze Projekt) und liest je Element zuerst den Parameter
-'GERAETEBEZEICHNUNG', bei leerem Wert ersatzweise 'Modell' (Fallback).
-Beide Parameter werden sowohl auf der Instanz als auch - falls dort nicht
-gefunden oder leer - auf dem zugehoerigen Elementtyp gesucht, da 'Modell'
-bei vielen Familien ein Typparameter ist.
-
-Ergebnis ist eine nach Duplikaten bereinigte, alphabetisch sortierte Liste
-der gefundenen Bezeichnungen - Ausgangsbasis fuer eine eigene (Dummy-)
-Datenbank. Elemente ohne Wert in beiden Parametern werden separat als
-'skipped' ausgegeben, damit man die Vollstaendigkeit pruefen kann.
+"""Dynamo Python Script node (eigenstaendig, keine weiteren Nodes noetig):
+durchsucht das gesamte aktuelle Revit-Projekt nach Elementen, die den
+Parameter 'GERAETEBEZEICHNUNG' oder 'Modell' besitzen (Instanz- oder
+Typparameter), liest bevorzugt 'GERAETEBEZEICHNUNG', sonst 'Modell', und
+liefert eine duplikatfreie, alphabetisch sortierte Liste der gefundenen
+Werte. Elemente mit einem der beiden Parameter, aber ohne Wert, werden
+separat als 'skipped' (Element-ID) ausgegeben; Elemente ohne beide
+Parameter werden ignoriert (so bleibt die Liste auf GA-relevante
+Bauteile beschraenkt, ohne dass Kategorien manuell ausgewaehlt werden
+muessen).
 
 Compatible with IronPython2 and CPython3 (no f-strings, no walrus)."""
 
@@ -19,53 +16,58 @@ import clr
 clr.AddReference('RevitAPI')
 clr.AddReference('RevitServices')
 from RevitServices.Persistence import DocumentManager
-from Autodesk.Revit.DB import ElementId
+from Autodesk.Revit.DB import FilteredElementCollector, ElementId
 
 doc = DocumentManager.Instance.CurrentDBDocument
 
-elements = IN[0]
-primary_param_name = IN[1] if len(IN) > 1 and IN[1] else 'GERAETEBEZEICHNUNG'
-fallback_param_name = IN[2] if len(IN) > 2 and IN[2] else 'Modell'
-
-if not isinstance(elements, list):
-	elements = [elements]
+PRIMARY_PARAM = 'GERAETEBEZEICHNUNG'
+FALLBACK_PARAM = 'Modell'
 
 
-def get_param_value(element, param_name):
-	"""Sucht param_name zuerst auf dem Element selbst, dann auf dessen Typ."""
-	p = element.LookupParameter(param_name)
-	if p is not None and p.HasValue:
-		val = p.AsString()
-		if not val:
-			val = p.AsValueString()
-		if val and val.strip():
-			return val.strip()
-
+def get_type(element):
 	type_id = element.GetTypeId()
-	if type_id is not None and type_id != ElementId.InvalidElementId:
-		el_type = doc.GetElement(type_id)
-		if el_type is not None:
-			tp = el_type.LookupParameter(param_name)
-			if tp is not None and tp.HasValue:
-				val = tp.AsString()
-				if not val:
-					val = tp.AsValueString()
-				if val and val.strip():
-					return val.strip()
+	if type_id is None or type_id == ElementId.InvalidElementId:
+		return None
+	return doc.GetElement(type_id)
+
+
+def find_param(element, name):
+	p = element.LookupParameter(name)
+	if p is not None:
+		return p
+	el_type = get_type(element)
+	if el_type is not None:
+		return el_type.LookupParameter(name)
 	return None
+
+
+def param_value(param):
+	if param is None or not param.HasValue:
+		return None
+	val = param.AsString()
+	if not val:
+		val = param.AsValueString()
+	return val.strip() if val else None
 
 
 seen = set()
 unique_values = []
 skipped = []
 
-for el in elements:
+collector = FilteredElementCollector(doc).WhereElementIsNotElementType()
+
+for el in collector:
 	if el is None:
 		continue
 
-	value = get_param_value(el, primary_param_name)
+	primary_param = find_param(el, PRIMARY_PARAM)
+	fallback_param = find_param(el, FALLBACK_PARAM)
+	if primary_param is None and fallback_param is None:
+		continue
+
+	value = param_value(primary_param)
 	if not value:
-		value = get_param_value(el, fallback_param_name)
+		value = param_value(fallback_param)
 
 	if not value:
 		skipped.append(el.Id.IntegerValue)
