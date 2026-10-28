@@ -119,12 +119,14 @@ pyrevit/
   Python-Umgebung läuft.
 - **Hinweise**: Der Updater öffnet keine Dialoge. Er merkt Hinweise vor,
   angezeigt werden sie im nächsten `Idling`-Ereignis als Sprechblase.
-- **Worksharing**: Bauteile, die einem anderen Benutzer gehören, werden
-  nicht verändert. Die Fehler werden gesammelt und gemeldet. Mit
-  `NUR_EIGENE_BAUTEILE_KENNZEICHNEN = True` (Standard) werden nur Bauteile
-  gekennzeichnet, die dem aktuellen Benutzer gehören. Neu erstellte Bauteile
-  gehören bis zur Synchronisierung ihrem Ersteller, Bauteile von Kollegen
-  bleiben also unverändert (T10).
+- **Ein-Personen-Betrieb**: Das Konzept geht davon aus, dass eine Person
+  die Nachtragsänderungen im Modell pflegt. Erprobt wird mit einer lokalen
+  Projektdatei. In Zentral- oder Cloud-Modellen (Autodesk Construction
+  Cloud) funktioniert der Modus ebenfalls. Bauteile, die gerade ein anderer
+  Benutzer belegt, werden übersprungen und gemeldet, statt die Transaktion
+  scheitern zu lassen. Für einen späteren Teambetrieb gibt es den Schalter
+  `NUR_EIGENE_BAUTEILE_KENNZEICHNEN` in `config.py` (Standard: aus). Er ist
+  noch nicht in Revit erprobt.
 - **Nicht** über den pyRevit-Hook `doc-changed`, weil das Dokument im
   `DocumentChanged`-Ereignis nicht verändert werden darf.
 
@@ -139,6 +141,8 @@ pyrevit/
 - Laufen zwei Revit-Sitzungen gleichzeitig, wirkt Starten oder Beenden nur in
   der Sitzung, in der geklickt wurde. Die andere übernimmt den Stand erst
   nach Neustart oder Reload.
+- **Teambetrieb** ist nicht Ziel dieser Stufe. Testfall T10 (Bauteile von
+  Kollegen bleiben unverändert) ist deshalb nicht gefordert.
 - Kollegen **ohne pyRevit** kennzeichnen nichts. Ihre Kopien von
   Nachtragsbauteilen behalten die Werte des Originals.
 - Beim Leeren nutzt die Erweiterung `Parameter.ClearValue()`, sofern die

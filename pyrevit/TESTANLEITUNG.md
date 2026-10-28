@@ -2,7 +2,7 @@
 
 ## Vorbereitung
 
-1. Testmodell öffnen, in dem `NT_Nachtragsnummer` und `NT_Grund` als
+1. Lokale Projektdatei (ohne Worksharing) als Testmodell öffnen, in dem `NT_Nachtragsnummer` und `NT_Grund` als
    Exemplarparameter für die GA-Kategorien angelegt sind.
 2. Erweiterung installieren (siehe `README.md`) und pyRevit **Reload**
    ausführen.
@@ -32,7 +32,7 @@ Unit-Tests ohne Revit (Eingabeprüfung, u. a. T6):
 | **T7** | Einen Fühler löschen. | Sprechblase oben rechts: „Bauteile nicht löschen, sondern als entfallen markieren. Rückgängig mit Strg+Z.“ Kein Dialog, der die Arbeit blockiert | Strg+Z stellt den Fühler wieder her. Andere Bauteile unverändert |
 | **T8** | Modell auf einem Rechner ohne pyRevit öffnen (oder: pyRevit → Einstellungen → Erweiterung GA_Nachtrag deaktivieren bzw. Revit ohne pyRevit-Add-in starten), dann Fühler platzieren und speichern. | Beim Öffnen keine Meldung zu einem fehlenden Updater („Dynamic Model Update“), Bearbeiten ohne Fehler | Kein Dialog beim Öffnen |
 | **T9** | Projekt **ohne** NT-Parameter öffnen (z. B. neues Projekt aus Vorlage) → *Nachtrag starten*. | Meldung „Parameter fehlen“ mit Liste der fehlenden Parameter. Dialog zur Eingabe erscheint nicht. Button bleibt unverändert | Nichts geschrieben, Strg+Z-Liste leer |
-| **T10** | Zentralmodell mit zwei Benutzern: Benutzer B (anderer Revit-Benutzername, Optionen → Allgemein) platziert Fühler ohne Nachtragsmodus und synchronisiert. Benutzer A hat Nachtrag 2 aktiv und führt *Mit Zentralmodell synchronisieren* bzw. *Neueste laden* aus. | Bauteile von B bleiben leer. A kann weiter eigene Bauteile mit Nummer 2 platzieren | Bauteilliste bei A und B |
+| **T10** | *Entfällt für die Bachelorarbeit* (Ein-Personen-Betrieb, lokale Projektdatei). Nur für einen späteren Teambetrieb relevant: dann `NUR_EIGENE_BAUTEILE_KENNZEICHNEN = True` setzen und mit zwei Benutzern im Zentralmodell testen. | – | – |
 
 ## Zusätzliche Prüfungen
 
@@ -46,16 +46,12 @@ Unit-Tests ohne Revit (Eingabeprüfung, u. a. T6):
   Nachtrag ist weiterhin aktiv.
 - **Nie gespeichertes Projekt**: *Nachtrag starten* meldet „Bitte das
   Projekt zuerst speichern“.
-
-- **Neustart**: Nachtrag 2 starten, Revit schließen und öffnen. Der Button
-  zeigt weiterhin „Nachtrag 2 aktiv“, neue Fühler erhalten Nummer 2.
+- **Neustart**: Nachtrag 2 starten, Revit schließen, ohne den Nachtrag zu
+  beenden, Revit neu starten und das Projekt öffnen. Der Button zeigt
+  weiterhin „Nachtrag 2 aktiv“, neue Fühler erhalten Nummer 2.
 - **Strg+Z nach Platzieren**: nimmt Bauteil und Kennzeichnung gemeinsam
   zurück.
 - **Kategorie ohne Parameterzuordnung**: Ist `NT_Nachtragsnummer` z. B. den
   Sicherheitsgeräten nicht zugeordnet, warnt *Nachtrag starten* vorher. Beim
   Platzieren erscheint einmal pro Projekt eine Sprechblase, dass diese
   Bauteile nicht gekennzeichnet wurden.
-- **Worksharing-Prüfung (T2 im Zentralmodell)**: Erscheint beim Platzieren
-  die Sprechblase „… nicht verändert, weil sie nicht Ihnen gehören“, bitte
-  melden. Dann muss die Besitzprüfung angepasst werden
-  (`NUR_EIGENE_BAUTEILE_KENNZEICHNEN` in `config.py`).

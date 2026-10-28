@@ -35,10 +35,15 @@ PARAMETER_STUFE_1 = [
 # Höchstlänge für den Grund des Nachtrags ("kurz").
 MAX_LAENGE_GRUND = 100
 
-# Worksharing: Nur neue Bauteile kennzeichnen, die dem aktuellen Benutzer
-# gehören. Neu erstellte Bauteile gehören bis zur Synchronisierung ihrem
-# Ersteller. Bauteile von Kollegen werden so nie verändert (Testfall T10).
-NUR_EIGENE_BAUTEILE_KENNZEICHNEN = True
+# Worksharing (nur relevant für Zentral- bzw. Cloud-Modelle):
+# False (Standard): Das Konzept geht davon aus, dass eine Person die
+#   Änderungen pflegt. Jedes neue GA-Bauteil wird gekennzeichnet, außer es
+#   ist gerade von einem anderen Benutzer belegt (dann wäre Schreiben ohnehin
+#   nicht möglich).
+# True: Nur Bauteile kennzeichnen, die ausdrücklich dem aktuellen Benutzer
+#   gehören. Schützt Bauteile von Kollegen im Teambetrieb (Testfall T10),
+#   ist aber in Revit noch nicht erprobt.
+NUR_EIGENE_BAUTEILE_KENNZEICHNEN = False
 
 # Feste Kennung des Dynamic Model Updaters. Nicht ändern, sonst gilt der
 # Updater in bestehenden Modellen als neuer Updater.
