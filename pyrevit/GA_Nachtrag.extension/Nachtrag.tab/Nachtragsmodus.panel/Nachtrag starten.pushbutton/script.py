@@ -3,6 +3,8 @@
 Benutzer im aktiven Projekt aktivieren. Danach in diesem Projekt platzierte
 GA-Bauteile werden gekennzeichnet."""
 
+import clr
+clr.AddReference("PresentationFramework")  # WPF, nötig für System.Windows
 from System.Windows import Visibility
 
 from pyrevit import HOST_APP, forms, script

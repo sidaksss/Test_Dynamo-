@@ -11,7 +11,8 @@ import os
 import re
 
 import clr
-clr.AddReference("PresentationCore")
+clr.AddReference("WindowsBase")         # WPF-Grundlagen
+clr.AddReference("PresentationCore")    # Bilder für das Button-Symbol
 from System import Uri
 from System.Windows.Media.Imaging import BitmapCacheOption, BitmapImage
 
