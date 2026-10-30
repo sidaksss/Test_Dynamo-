@@ -24,6 +24,14 @@ PRIMARY_PARAM = 'GERAETEBEZEICHNUNG'
 FALLBACK_PARAM = 'Modell'
 
 
+def id_value(element_id):
+	# ElementId.IntegerValue wurde in Revit 2026 entfernt (ersetzt durch .Value).
+	try:
+		return element_id.Value
+	except AttributeError:
+		return element_id.IntegerValue
+
+
 def get_type(element):
 	type_id = element.GetTypeId()
 	if type_id is None or type_id == ElementId.InvalidElementId:
@@ -70,7 +78,7 @@ for el in collector:
 		value = param_value(fallback_param)
 
 	if not value:
-		skipped.append(el.Id.IntegerValue)
+		skipped.append(id_value(el.Id))
 		continue
 
 	if value not in seen:
